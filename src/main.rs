@@ -15,11 +15,13 @@ struct RoboRex {
     walking_sprites: Vec<Asset<Image>>,
     walking_sprites_idx: usize,
     time: f64,
+    tick: f64,
     player: Player,
 }
 
 struct Player {
     state: PlayerState,
+    framerate: u32,
 }
 
 enum PlayerState {
@@ -36,6 +38,7 @@ impl Player {
     fn new() -> Self {
         Player {
             state: PlayerState::Standing,
+            framerate: 10,
         }
     }
 }
@@ -57,6 +60,7 @@ impl State for RoboRex {
             walking_sprites,
             walking_sprites_idx: 0,
             time: 0.,
+            tick: 0.,
             player: Player::new(),
         })
     }
@@ -64,13 +68,18 @@ impl State for RoboRex {
     fn update(&mut self, window: &mut Window) -> Result<()> {
         let update_rate = window.update_rate();
         self.time += update_rate;
-        self.walking_sprites_idx += 1;
+        self.tick += update_rate;
+        if self.tick > (1000. / (self.player.framerate as f64)) {
+            self.walking_sprites_idx += 1;
+            self.tick = 0.;
+        }
 
         if window.keyboard()[Key::Right].is_down() {
             self.player.state = PlayerState::Walking(Direction::Right);
         } else if window.keyboard()[Key::Left].is_down() {
             self.player.state = PlayerState::Walking(Direction::Left);
         } else {
+            self.tick = 0.;
             self.walking_sprites_idx = 0;
             self.player.state = PlayerState::Standing;
         }
@@ -79,7 +88,7 @@ impl State for RoboRex {
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
-        let walking_sprites_idx = (self.walking_sprites_idx / 10) % self.walking_sprites.len();
+        let walking_sprites_idx = self.walking_sprites_idx % self.walking_sprites.len();
         match self.player.state {
             PlayerState::Standing => self.standing_sprite.execute(|image| {
                 window.draw_ex(
