@@ -1,0 +1,7 @@
+[package]
+name = "roborex-qs"
+version = "0.1.0"
+authors = ["Abadi Kurniawan <abadi.kurniawan@gmail.com>"]
+
+[dependencies]
+quicksilver = "0.3.2"
