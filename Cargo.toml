@@ -5,3 +5,4 @@ authors = ["Abadi Kurniawan <abadi.kurniawan@gmail.com>"]
 
 [dependencies]
 quicksilver = "0.3.2"
+nalgebra = "0.16.10"
