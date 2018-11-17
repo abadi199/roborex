@@ -1,15 +1,19 @@
 // Draw some multi-colored geometry to the screen
 extern crate nalgebra;
 extern crate quicksilver;
+extern crate tiled;
 
-use nalgebra::geometry::Point2;
 use quicksilver::{
-    geom::{Shape, Transform, Vector},
+    geom::{Rectangle, Shape, Transform, Vector},
     graphics::{Background::Img, Color, Image},
     input::Key,
     lifecycle::{run, Asset, Settings, State, Window},
     Result,
 };
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+use tiled::parse;
 
 // A unit struct that we're going to use to run the Quicksilver functions
 struct RoboRex {
@@ -21,6 +25,7 @@ struct RoboRex {
     walking_tick: f64,
     time: f64,
     player: Player,
+    game_map: GameMap,
 }
 
 enum PlayerState {
@@ -80,6 +85,96 @@ impl Motion {
     }
 }
 
+struct GameLayer {
+    rectangles: Vec<Vec<Option<Rectangle>>>,
+    image: Asset<Image>,
+}
+
+impl GameLayer {
+    fn draw(&mut self, window: &mut Window) {
+        let rectangles = &self.rectangles;
+        self.image.execute(|image| {
+            for (i, row) in rectangles.iter().enumerate() {
+                for (j, col) in row.iter().enumerate() {
+                    if let Some(rec) = col {
+                        window.draw(
+                            &Rectangle::new(((j as u32 * 16), (i as u32 * 16)), (16, 16)),
+                            Img(&image.subimage(*rec)),
+                        );
+                    }
+                }
+            }
+            Ok(())
+        });
+    }
+}
+
+struct GameMap {
+    layers: Vec<GameLayer>,
+}
+
+impl GameMap {
+    fn load(map: tiled::Map) -> Self {
+        let layers: Vec<GameLayer> = map
+            .layers
+            .iter()
+            .map(|layer| {
+                Self::to_game_layer(
+                    &layer,
+                    map.tile_width,
+                    map.tile_height,
+                    &map.tilesets[0].images[0],
+                )
+            })
+            .collect();
+        GameMap { layers }
+    }
+
+    fn draw(&mut self, window: &mut Window) {
+        self.layers[0].draw(window);
+        self.layers[1].draw(window);
+        self.layers[2].draw(window);
+    }
+
+    fn to_game_layer(
+        layer: &tiled::Layer,
+        tile_width: u32,
+        tile_height: u32,
+        image: &tiled::Image,
+    ) -> GameLayer {
+        let rectangles = layer
+            .tiles
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .map(|tile: &u32| Self::to_rectangle(*tile, tile_width, tile_height, image))
+                    .collect()
+            })
+            .collect();
+        let image = Asset::new(Image::load(format!("resources/tiled/{}", image.source)));
+        println!("{:?}", rectangles);
+        GameLayer { rectangles, image }
+    }
+
+    fn to_rectangle(
+        tile: u32,
+        tile_width: u32,
+        tile_height: u32,
+        image: &tiled::Image,
+    ) -> Option<Rectangle> {
+        match tile {
+            0 => None,
+            _ => Some(Rectangle::new(
+                (
+                    ((tile % (image.width as u32 / tile_width) * tile_width) - tile_width) as f32,
+                    (tile / (image.width as u32 / tile_height) * tile_height) as f32,
+                ),
+                (tile_width as f32, tile_height as f32),
+            )),
+        }
+    }
+}
+
 struct Player {
     position: Vector,
     state: PlayerState,
@@ -113,6 +208,12 @@ impl State for RoboRex {
             Asset::new(Image::load("resources/images/DinoWalk3.png")),
         ];
 
+        let file = File::open(&Path::new("resources/tiled/level.tmx")).unwrap();
+        println!("Opened file");
+        let reader = BufReader::new(file);
+        let map = parse(reader).unwrap();
+        let game_map = GameMap::load(map);
+
         Ok(RoboRex {
             standing_sprites,
             standing_sprites_idx: 0,
@@ -122,6 +223,7 @@ impl State for RoboRex {
             walking_tick: 0.,
             time: 0.,
             player: Player::new(),
+            game_map,
         })
     }
 
@@ -183,6 +285,8 @@ impl State for RoboRex {
                 &mut self.walking_sprites[walking_sprites_idx]
             }
         };
+
+        self.game_map.draw(window);
 
         image.execute(|image| {
             window.draw_ex(
