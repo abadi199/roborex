@@ -90,16 +90,28 @@ struct GameLayer {
     image: Asset<Image>,
 }
 
+const TILE_WIDTH: u32 = 16;
+const TILE_HEIGHT: u32 = 16;
+
 impl GameLayer {
     fn draw(&mut self, window: &mut Window) {
         let rectangles = &self.rectangles;
         self.image.execute(|image| {
-            for (i, row) in rectangles.iter().enumerate() {
-                for (j, col) in row.iter().enumerate() {
+            for (y, row) in rectangles.iter().enumerate() {
+                for (x, col) in row.iter().enumerate() {
                     if let Some(rec) = col {
-                        window.draw(
-                            &Rectangle::new(((j as u32 * 16), (i as u32 * 16)), (16, 16)),
+                        let draw_rec = Rectangle::new(
+                            (
+                                (x as u32 * TILE_WIDTH * 2) + 8,
+                                (y as u32 * TILE_HEIGHT * 2) + 8,
+                            ),
+                            (TILE_WIDTH, TILE_HEIGHT),
+                        );
+                        window.draw_ex(
+                            &draw_rec,
                             Img(&image.subimage(*rec)),
+                            Transform::scale(Vector::new(2, 2)),
+                            1,
                         );
                     }
                 }
@@ -152,7 +164,6 @@ impl GameMap {
             })
             .collect();
         let image = Asset::new(Image::load(format!("resources/tiled/{}", image.source)));
-        println!("{:?}", rectangles);
         GameLayer { rectangles, image }
     }
 
@@ -185,7 +196,7 @@ struct Player {
 impl Player {
     fn new() -> Self {
         Player {
-            position: Vector::new(300, 300),
+            position: Vector::new(300, 30),
             state: PlayerState::Standing(Direction::Right),
             framerate: 10,
             speed: 3,
@@ -266,7 +277,7 @@ impl State for RoboRex {
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
         let player_position = self.player.position;
-        let scale = Transform::scale(Vector::new(0.5, 0.5));
+        let scale = Transform::scale(Vector::new(0.25, 0.25));
         let flip = Transform::scale(Vector::new(-1, 1)) * Transform::translate(Vector::new(64, 0));
         let transformation = match self.player.state {
             PlayerState::Standing(Direction::Right) => scale,
@@ -305,5 +316,5 @@ impl State for RoboRex {
 fn main() {
     // Run with DrawGeometry as the event handler, with a window title of 'Draw Geometry' and a
     // size of (800, 600)
-    run::<RoboRex>("RoboRex", Vector::new(800, 600), Settings::default());
+    run::<RoboRex>("RoboRex", Vector::new(512, 512), Settings::default());
 }
