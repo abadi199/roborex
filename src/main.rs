@@ -6,7 +6,7 @@ extern crate tiled;
 use quicksilver::{
     geom::{Rectangle, Shape, Transform, Vector},
     graphics::{Background::Img, Color, Image},
-    input::Key,
+    input::{ButtonState, Key},
     lifecycle::{run, Asset, Settings, State, Window},
     Result,
 };
@@ -15,37 +15,77 @@ use std::io::BufReader;
 use std::path::Path;
 use tiled::parse;
 
+const TILE_WIDTH: u32 = 16;
+const TILE_HEIGHT: u32 = 16;
+const WALKING_DURATION: f64 = 500.;
+
 // A unit struct that we're going to use to run the Quicksilver functions
 struct RoboRex {
-    standing_sprites: Vec<Asset<Image>>,
-    standing_sprites_idx: usize,
-    standing_tick: f64,
-    walking_sprites: Vec<Asset<Image>>,
-    walking_sprites_idx: usize,
-    walking_tick: f64,
     time: f64,
     player: Player,
     game_map: GameMap,
 }
 
+#[derive(Debug)]
 enum PlayerState {
     Standing(Direction),
-    Walking(Direction),
+    Walking {
+        direction: Direction,
+        grid_count: u32,
+        timer: f64,
+        sprites_idx: usize,
+        tick: f64,
+    },
+}
+
+impl PlayerState {
+    fn sprites_idx(&mut self, new_sprites_idx: usize) {
+        if let PlayerState::Walking {
+            ref mut sprites_idx,
+            ..
+        } = self
+        {
+            *sprites_idx = new_sprites_idx;
+        }
+    }
+
+    fn timer(&mut self, new_timer: f64) {
+        if let PlayerState::Walking { ref mut timer, .. } = self {
+            *timer = new_timer;
+        }
+    }
+
+    fn grid_count(&mut self, new_grid_count: u32) {
+        if let PlayerState::Walking {
+            ref mut grid_count, ..
+        } = self
+        {
+            *grid_count = new_grid_count;
+        }
+    }
+
+    fn tick(&mut self, new_tick: f64) {
+        if let PlayerState::Walking { ref mut tick, .. } = self {
+            *tick = new_tick;
+        }
+    }
 }
 
 impl PlayerState {
     fn stop(&self) -> Self {
         match self {
-            PlayerState::Walking(direction) => PlayerState::Standing(direction.clone()),
+            PlayerState::Walking { direction, .. } => PlayerState::Standing(direction.clone()),
             PlayerState::Standing(direction) => PlayerState::Standing(direction.clone()),
         }
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum Direction {
     Left,
     Right,
+    Up,
+    Down,
 }
 
 #[derive(Copy, Clone)]
@@ -65,6 +105,20 @@ impl Motion {
     fn right(speed: i32) -> Self {
         Motion {
             velocity: Transform::scale(Vector::new(speed, speed)) * Vector::new(1, 0),
+            acceleration: Vector::new(0, 0),
+        }
+    }
+
+    fn up(speed: i32) -> Self {
+        Motion {
+            velocity: Transform::scale(Vector::new(speed, speed)) * Vector::new(0, -1),
+            acceleration: Vector::new(0, 0),
+        }
+    }
+
+    fn down(speed: i32) -> Self {
+        Motion {
+            velocity: Transform::scale(Vector::new(speed, speed)) * Vector::new(0, 1),
             acceleration: Vector::new(0, 0),
         }
     }
@@ -90,9 +144,6 @@ struct GameLayer {
     image: Asset<Image>,
 }
 
-const TILE_WIDTH: u32 = 16;
-const TILE_HEIGHT: u32 = 16;
-
 impl GameLayer {
     fn draw(&mut self, window: &mut Window) {
         let rectangles = &self.rectangles;
@@ -100,13 +151,7 @@ impl GameLayer {
             for (y, row) in rectangles.iter().enumerate() {
                 for (x, col) in row.iter().enumerate() {
                     if let Some(rec) = col {
-                        let draw_rec = Rectangle::new(
-                            (
-                                (x as u32 * TILE_WIDTH * 2) + 8,
-                                (y as u32 * TILE_HEIGHT * 2) + 8,
-                            ),
-                            (TILE_WIDTH, TILE_HEIGHT),
-                        );
+                        let draw_rec = Grid::to_rectangle(x as u32, y as u32);
                         window.draw_ex(
                             &draw_rec,
                             Img(&image.subimage(*rec)),
@@ -121,8 +166,58 @@ impl GameLayer {
     }
 }
 
+enum Grid {
+    Path,
+    NonPath,
+}
+
+impl Grid {
+    fn to_rectangle(x: u32, y: u32) -> Rectangle {
+        Rectangle::new(
+            ((x * TILE_WIDTH * 2) + 8, (y * TILE_HEIGHT * 2) + 8),
+            (TILE_WIDTH, TILE_HEIGHT),
+        )
+    }
+
+    fn to_coordinate((x, y): (u32, u32)) -> Vector {
+        Vector::new((x * TILE_WIDTH * 2) + 8, (y * TILE_HEIGHT * 2) + 8)
+    }
+
+    fn to_player_coordinate(state: &PlayerState, (x, y): (u32, u32)) -> Vector {
+        let (delta_x, delta_y) = match state {
+            PlayerState::Walking {
+                direction: Direction::Right,
+                timer,
+                ..
+            } => (((WALKING_DURATION - timer) / WALKING_DURATION) * 32., 0.),
+            PlayerState::Walking {
+                direction: Direction::Left,
+                timer,
+                ..
+            } => (((WALKING_DURATION - timer) / WALKING_DURATION) * -32., 0.),
+            PlayerState::Walking {
+                direction: Direction::Up,
+                timer,
+                ..
+            } => (0., ((WALKING_DURATION - timer) / WALKING_DURATION) * -32.),
+            PlayerState::Walking {
+                direction: Direction::Down,
+                timer,
+                ..
+            } => (0., ((WALKING_DURATION - timer) / WALKING_DURATION) * 32.),
+            _ => (0., 0.),
+        };
+
+        Vector::new(
+            (((x * TILE_WIDTH * 2) + 40) as i32 + delta_x as i32) as u32,
+            (((y * TILE_HEIGHT * 2) + 24) as i32 + delta_y as i32) as u32,
+        )
+    }
+}
+
 struct GameMap {
     layers: Vec<GameLayer>,
+    grid: Vec<Vec<Grid>>,
 }
 
 impl GameMap {
@@ -139,7 +234,10 @@ impl GameMap {
                 )
             })
             .collect();
-        GameMap { layers }
+        GameMap {
+            layers,
+            grid: vec![],
+        }
     }
 
     fn draw(&mut self, window: &mut Window) {
@@ -187,26 +285,18 @@ impl GameMap {
 }
 
 struct Player {
-    position: Vector,
+    position: (u32, u32),
     state: PlayerState,
     framerate: u32,
     speed: i32,
+    standing_sprites: Vec<Asset<Image>>,
+    standing_sprites_idx: usize,
+    standing_tick: f64,
+    walking_sprites: Vec<Asset<Image>>,
 }
 
 impl Player {
     fn new() -> Self {
-        Player {
-            position: Vector::new(300, 30),
-            state: PlayerState::Standing(Direction::Right),
-            framerate: 10,
-            speed: 3,
-        }
-    }
-}
-
-impl State for RoboRex {
-    // Initialize the struct
-    fn new() -> Result<RoboRex> {
         let standing_sprites: Vec<Asset<Image>> = vec![
             Asset::new(Image::load("resources/images/DinoStill1.png")),
             Asset::new(Image::load("resources/images/DinoStill2.png")),
@@ -219,6 +309,155 @@ impl State for RoboRex {
             Asset::new(Image::load("resources/images/DinoWalk3.png")),
         ];
 
+        Player {
+            position: (0, 0),
+            state: PlayerState::Standing(Direction::Right),
+            framerate: 10,
+            speed: 3,
+            standing_sprites,
+            standing_sprites_idx: 0,
+            standing_tick: 0.,
+            walking_sprites,
+        }
+    }
+
+    fn update(&mut self, window: &mut Window) -> Result<()> {
+        let update_rate = window.update_rate();
+        self.standing_tick += update_rate;
+
+        if let PlayerState::Walking {
+            direction,
+            sprites_idx,
+            tick,
+            timer,
+            ..
+        } = self.state
+        {
+            if timer <= 0. {
+                self.state = self.state.stop();
+                match direction {
+                    Direction::Right => self.position.0 += 1,
+                    Direction::Left if self.position.0 < 1 => {}
+                    Direction::Left => self.position.0 -= 1,
+                    Direction::Up if self.position.1 < 1 => {}
+                    Direction::Up => self.position.1 -= 1,
+                    Direction::Down => self.position.1 += 1,
+                };
+            } else {
+                let updated_tick = tick + update_rate;
+                self.state.tick(updated_tick);
+                self.state.timer(timer - update_rate);
+
+                if updated_tick > (1000. / (self.framerate as f64)) {
+                    self.state.sprites_idx(sprites_idx + 1);
+                    self.state.tick(0.);
+                }
+            }
+        }
+
+        if self.standing_tick > (1000. / (self.framerate as f64)) {
+            self.standing_sprites_idx += 1;
+            self.standing_tick = 0.;
+        }
+
+        if window.keyboard()[Key::Right].is_down() && !self.is_walking() {
+            self.walk(Direction::Right);
+        }
+
+        if window.keyboard()[Key::Left].is_down() && !self.is_walking() {
+            self.walk(Direction::Left);
+        }
+
+        if window.keyboard()[Key::Up].is_down() && !self.is_walking() {
+            self.walk(Direction::Up);
+        }
+
+        if window.keyboard()[Key::Down].is_down() && !self.is_walking() {
+            self.walk(Direction::Down);
+        }
+
+        // if !window.keyboard()[key::up].is_down()
+        //     && !window.keyboard()[key::down].is_down()
+        //     && !window.keyboard()[key::left].is_down()
+        //     && !window.keyboard()[key::right].is_down()
+        // {
+        //     self.state = self.state.stop();
+        // }
+
+        Ok(())
+    }
+
+    fn is_walking(&self) -> bool {
+        match self.state {
+            PlayerState::Walking { .. } => true,
+            PlayerState::Standing(_) => false,
+        }
+    }
+
+    fn walk(&mut self, direction: Direction) {
+        self.standing_tick = 0.;
+        self.standing_sprites_idx = 0;
+        self.state = PlayerState::Walking {
+            direction,
+            grid_count: 1,
+            timer: WALKING_DURATION,
+            sprites_idx: 0,
+            tick: 0.,
+        };
+    }
+
+    fn draw(&mut self, window: &mut Window) -> Result<()> {
+        let mut player_coordinate = Grid::to_player_coordinate(&self.state, self.position);
+        let scale = Transform::scale(Vector::new(0.2, 0.2));
+        let flip = Transform::scale(Vector::new(-1, 1)) * Transform::translate(Vector::new(64, 0));
+        let transformation = match self.state {
+            PlayerState::Standing(Direction::Up)
+            | PlayerState::Standing(Direction::Down)
+            | PlayerState::Standing(Direction::Right)
+            | PlayerState::Walking {
+                direction: Direction::Up,
+                ..
+            }
+            | PlayerState::Walking {
+                direction: Direction::Down,
+                ..
+            }
+            | PlayerState::Walking {
+                direction: Direction::Right,
+                ..
+            } => scale,
+            PlayerState::Standing(Direction::Left)
+            | PlayerState::Walking {
+                direction: Direction::Left,
+                ..
+            } => scale * flip,
+        };
+
+        let image = match self.state {
+            PlayerState::Standing(_) => {
+                let standing_sprites_idx = self.standing_sprites_idx % self.standing_sprites.len();
+                &mut self.standing_sprites[standing_sprites_idx]
+            }
+            PlayerState::Walking { sprites_idx, .. } => {
+                let walking_sprites_idx = sprites_idx % self.walking_sprites.len();
+                &mut self.walking_sprites[walking_sprites_idx]
+            }
+        };
+        image.execute(|image| {
+            window.draw_ex(
+                &image.area().with_center(player_coordinate),
+                Img(&image),
+                transformation,
+                1,
+            );
+            Ok(())
+        })
+    }
+}
+
+impl State for RoboRex {
+    // Initialize the struct
+    fn new() -> Result<RoboRex> {
         let file = File::open(&Path::new("resources/tiled/level.tmx")).unwrap();
         println!("Opened file");
         let reader = BufReader::new(file);
@@ -226,12 +465,6 @@ impl State for RoboRex {
         let game_map = GameMap::load(map);
 
         Ok(RoboRex {
-            standing_sprites,
-            standing_sprites_idx: 0,
-            standing_tick: 0.,
-            walking_sprites,
-            walking_sprites_idx: 0,
-            walking_tick: 0.,
             time: 0.,
             player: Player::new(),
             game_map,
@@ -239,75 +472,16 @@ impl State for RoboRex {
     }
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
-        let update_rate = window.update_rate();
-        self.time += update_rate;
-        self.walking_tick += update_rate;
-        self.standing_tick += update_rate;
-        if self.walking_tick > (1000. / (self.player.framerate as f64)) {
-            self.walking_sprites_idx += 1;
-            self.walking_tick = 0.;
-        }
-
-        if self.standing_tick > (1000. / (self.player.framerate as f64)) {
-            self.standing_sprites_idx += 1;
-            self.standing_tick = 0.;
-        }
-
-        if window.keyboard()[Key::Right].is_down() {
-            self.standing_tick = 0.;
-            self.standing_sprites_idx = 0;
-            let motion = Motion::right(self.player.speed);
-            self.player.state = PlayerState::Walking(Direction::Right);
-            self.player.position = self.player.position + motion.velocity;
-        } else if window.keyboard()[Key::Left].is_down() {
-            self.standing_tick = 0.;
-            self.standing_sprites_idx = 0;
-            let motion = Motion::left(self.player.speed);
-            self.player.state = PlayerState::Walking(Direction::Left);
-            self.player.position = self.player.position + motion.velocity;
-        } else {
-            self.walking_tick = 0.;
-            self.walking_sprites_idx = 0;
-            self.player.state = self.player.state.stop();
-        }
-
+        self.time += window.update_rate();
+        self.player.update(window)?;
         Ok(())
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
-        let player_position = self.player.position;
-        let scale = Transform::scale(Vector::new(0.25, 0.25));
-        let flip = Transform::scale(Vector::new(-1, 1)) * Transform::translate(Vector::new(64, 0));
-        let transformation = match self.player.state {
-            PlayerState::Standing(Direction::Right) => scale,
-            PlayerState::Standing(Direction::Left) => scale * flip,
-            PlayerState::Walking(Direction::Right) => scale,
-            PlayerState::Walking(Direction::Left) => scale * flip,
-        };
-
-        let image = match self.player.state {
-            PlayerState::Standing(_) => {
-                let standing_sprites_idx = self.standing_sprites_idx % self.standing_sprites.len();
-                &mut self.standing_sprites[standing_sprites_idx]
-            }
-            PlayerState::Walking(_) => {
-                let walking_sprites_idx = self.walking_sprites_idx % self.walking_sprites.len();
-                &mut self.walking_sprites[walking_sprites_idx]
-            }
-        };
-
         self.game_map.draw(window);
-
-        image.execute(|image| {
-            window.draw_ex(
-                &image.area().with_center(player_position),
-                Img(&image),
-                transformation,
-                1,
-            );
-            Ok(())
-        })
+        self.player.draw(window)?;
+        Ok(())
     }
 }
 
