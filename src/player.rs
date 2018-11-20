@@ -65,30 +65,30 @@ impl Player {
         } = self.state
         {
             if timer <= 0. {
+                match direction {
+                    Direction::Right => self.position.0 += 1,
+                    Direction::Left if self.position.0 < 1 => {}
+                    Direction::Left => self.position.0 -= 1,
+                    Direction::Up if self.position.1 < 1 => {}
+                    Direction::Up => self.position.1 -= 1,
+                    Direction::Down => self.position.1 += 1,
+                };
                 if !Self::is_walking_button_pressed(window.keyboard()) {
                     self.state = self.state.stop();
-                    match direction {
-                        Direction::Right => self.position.0 += 1,
-                        Direction::Left if self.position.0 < 1 => {}
-                        Direction::Left => self.position.0 -= 1,
-                        Direction::Up if self.position.1 < 1 => {}
-                        Direction::Up => self.position.1 -= 1,
-                        Direction::Down => self.position.1 += 1,
-                    };
                 } else {
-                    if window.keyboard()[Key::Right].is_down() && !self.is_walking() {
+                    if window.keyboard()[Key::Right].is_down() {
                         self.walk(Direction::Right);
                     }
 
-                    if window.keyboard()[Key::Left].is_down() && !self.is_walking() {
+                    if window.keyboard()[Key::Left].is_down() {
                         self.walk(Direction::Left);
                     }
 
-                    if window.keyboard()[Key::Up].is_down() && !self.is_walking() {
+                    if window.keyboard()[Key::Up].is_down() {
                         self.walk(Direction::Up);
                     }
 
-                    if window.keyboard()[Key::Down].is_down() && !self.is_walking() {
+                    if window.keyboard()[Key::Down].is_down() {
                         self.walk(Direction::Down);
                     }
                 }
@@ -124,14 +124,6 @@ impl Player {
         if window.keyboard()[Key::Down].is_down() && !self.is_walking() {
             self.walk(Direction::Down);
         }
-
-        // if !window.keyboard()[key::up].is_down()
-        //     && !window.keyboard()[key::down].is_down()
-        //     && !window.keyboard()[key::left].is_down()
-        //     && !window.keyboard()[key::right].is_down()
-        // {
-        //     self.state = self.state.stop();
-        // }
 
         Ok(())
     }
