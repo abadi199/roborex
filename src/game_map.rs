@@ -5,6 +5,7 @@ use quicksilver::{
     graphics::Image,
     lifecycle::{Asset, Window},
 };
+use std::cmp::max;
 use std::collections::HashSet;
 use tiled;
 
@@ -45,9 +46,6 @@ impl GameMap {
             })
             .collect();
         let grid: GridMap = Self::to_grid(map.layers);
-        for row in grid.iter() {
-            println!("{:?}", row);
-        }
         GameMap { layers, grid }
     }
 
@@ -102,10 +100,33 @@ impl GameMap {
     }
 
     fn join(a: GridMap, b: GridMap) -> GridMap {
-        a
-        //     a.iter()
-        //         .map(|row| row.iter().map(|grid| grid.clone()).collect())
-        //         .collect()
+        let max_y = max(a.len(), b.len());
+        let new_grid: GridMap = (0..max_y)
+            .map(|y| {
+                let row_a = a.get(y);
+                let row_b = b.get(y);
+                let max_x = max(
+                    row_a.map(|v| v.len()).unwrap_or(0),
+                    row_b.map(|v| v.len()).unwrap_or(0),
+                );
+                (0..max_x)
+                    .map(|x| {
+                        let grid_a = row_a.and_then(|v| v.get(x)).unwrap_or(&Grid::Empty);
+                        let grid_b = row_b.and_then(|v| v.get(x)).unwrap_or(&Grid::Empty);
+                        match (grid_a, grid_b) {
+                            (Grid::Path, Grid::Empty) => Grid::Path,
+                            (Grid::Empty, Grid::Empty) => Grid::Empty,
+                            (Grid::Empty, Grid::Path) => Grid::Path,
+                            (Grid::Path, Grid::Path) => Grid::Path,
+                            (_, Grid::NonPath) => Grid::NonPath,
+                            (Grid::NonPath, _) => Grid::NonPath,
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+
+        new_grid
     }
 
     fn to_game_layer(
@@ -118,9 +139,6 @@ impl GameMap {
             .tiles
             .iter()
             .map(|row| {
-                if layer.name == "Fence" {
-                    println!("{:?}", row);
-                }
                 row.iter()
                     .map(|tile: &u32| Self::to_rectangle(*tile, tile_width, tile_height, image))
                     .collect()
