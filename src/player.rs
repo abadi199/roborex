@@ -1,4 +1,4 @@
-use constant::WALKING_DURATION;
+use constant::{SCALING_FACTOR, TILE_WIDTH, WALKING_DURATION};
 use direction::Direction;
 use game_map::GameMap;
 use grid::Grid;
@@ -24,15 +24,15 @@ pub struct Player {
 impl Player {
     pub fn new() -> Self {
         let standing_sprites: Vec<Asset<Image>> = vec![
-            Asset::new(Image::load("resources/images/DinoStill1.png")),
-            Asset::new(Image::load("resources/images/DinoStill2.png")),
-            Asset::new(Image::load("resources/images/DinoStill3.png")),
+            Asset::new(Image::load("resources/images/frame1.png")),
+            Asset::new(Image::load("resources/images/frame2.png")),
+            Asset::new(Image::load("resources/images/frame3.png")),
         ];
 
         let walking_sprites: Vec<Asset<Image>> = vec![
-            Asset::new(Image::load("resources/images/DinoWalk1.png")),
-            Asset::new(Image::load("resources/images/DinoWalk2.png")),
-            Asset::new(Image::load("resources/images/DinoWalk3.png")),
+            Asset::new(Image::load("resources/images/frame1.png")),
+            Asset::new(Image::load("resources/images/frame2.png")),
+            Asset::new(Image::load("resources/images/frame3.png")),
         ];
 
         Player {
@@ -170,8 +170,8 @@ impl Player {
 
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {
         let player_coordinate = Grid::to_player_coordinate(&self.state, self.position);
-        let scale = Transform::scale(Vector::new(0.2, 0.2));
-        let flip = Transform::scale(Vector::new(-1, 1)) * Transform::translate(Vector::new(64, 0));
+        let scale = Transform::scale(Vector::new(SCALING_FACTOR, SCALING_FACTOR));
+        let flip = Transform::scale(Vector::new(-1, 1));
         let transformation = match self.state {
             PlayerState::Standing(Direction::Up)
             | PlayerState::Standing(Direction::Down)
