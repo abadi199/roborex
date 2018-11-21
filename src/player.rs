@@ -15,34 +15,62 @@ pub struct Player {
     position: (u32, u32),
     state: PlayerState,
     framerate: u32,
-    standing_sprites: Vec<Asset<Image>>,
+    standing_side_sprites: Vec<Asset<Image>>,
+    standing_up_sprites: Vec<Asset<Image>>,
+    standing_down_sprites: Vec<Asset<Image>>,
     standing_sprites_idx: usize,
     standing_tick: f64,
-    walking_sprites: Vec<Asset<Image>>,
+    walking_side_sprites: Vec<Asset<Image>>,
+    walking_up_sprites: Vec<Asset<Image>>,
+    walking_down_sprites: Vec<Asset<Image>>,
 }
 
 impl Player {
     pub fn new() -> Self {
-        let standing_sprites: Vec<Asset<Image>> = vec![
-            Asset::new(Image::load("resources/images/frame1.png")),
-            Asset::new(Image::load("resources/images/frame2.png")),
-            Asset::new(Image::load("resources/images/frame3.png")),
+        let standing_side_sprites: Vec<Asset<Image>> = vec![
+            Asset::new(Image::load("resources/images/still-side1.png")),
+            Asset::new(Image::load("resources/images/still-side2.png")),
+        ];
+        let standing_up_sprites: Vec<Asset<Image>> = vec![
+            Asset::new(Image::load("resources/images/still-up1.png")),
+            Asset::new(Image::load("resources/images/still-up2.png")),
+        ];
+        let standing_down_sprites: Vec<Asset<Image>> = vec![
+            Asset::new(Image::load("resources/images/still-down1.png")),
+            Asset::new(Image::load("resources/images/still-down2.png")),
         ];
 
-        let walking_sprites: Vec<Asset<Image>> = vec![
-            Asset::new(Image::load("resources/images/frame1.png")),
-            Asset::new(Image::load("resources/images/frame2.png")),
-            Asset::new(Image::load("resources/images/frame3.png")),
+        let walking_side_sprites: Vec<Asset<Image>> = vec![
+            Asset::new(Image::load("resources/images/walking-side1.png")),
+            Asset::new(Image::load("resources/images/walking-side2.png")),
+            Asset::new(Image::load("resources/images/walking-side3.png")),
+            Asset::new(Image::load("resources/images/walking-side4.png")),
+        ];
+        let walking_up_sprites: Vec<Asset<Image>> = vec![
+            Asset::new(Image::load("resources/images/walking-up1.png")),
+            Asset::new(Image::load("resources/images/walking-up2.png")),
+            Asset::new(Image::load("resources/images/walking-up3.png")),
+            Asset::new(Image::load("resources/images/walking-up4.png")),
+        ];
+        let walking_down_sprites: Vec<Asset<Image>> = vec![
+            Asset::new(Image::load("resources/images/walking-down1.png")),
+            Asset::new(Image::load("resources/images/walking-down2.png")),
+            Asset::new(Image::load("resources/images/walking-down3.png")),
+            Asset::new(Image::load("resources/images/walking-down4.png")),
         ];
 
         Player {
             position: (0, 0),
             state: PlayerState::Standing(Direction::Right),
-            framerate: 10,
-            standing_sprites,
+            framerate: 5,
+            standing_side_sprites,
+            standing_up_sprites,
+            standing_down_sprites,
             standing_sprites_idx: 0,
             standing_tick: 0.,
-            walking_sprites,
+            walking_side_sprites,
+            walking_up_sprites,
+            walking_down_sprites,
         }
     }
 
@@ -196,13 +224,49 @@ impl Player {
         };
 
         let image = match self.state {
-            PlayerState::Standing(_) => {
-                let standing_sprites_idx = self.standing_sprites_idx % self.standing_sprites.len();
-                &mut self.standing_sprites[standing_sprites_idx]
+            PlayerState::Standing(Direction::Left) | PlayerState::Standing(Direction::Right) => {
+                let standing_sprites_idx =
+                    self.standing_sprites_idx % self.standing_side_sprites.len();
+                &mut self.standing_side_sprites[standing_sprites_idx]
             }
-            PlayerState::Walking { sprites_idx, .. } => {
-                let walking_sprites_idx = sprites_idx % self.walking_sprites.len();
-                &mut self.walking_sprites[walking_sprites_idx]
+            PlayerState::Standing(Direction::Up) => {
+                let standing_sprites_idx =
+                    self.standing_sprites_idx % self.standing_up_sprites.len();
+                &mut self.standing_up_sprites[standing_sprites_idx]
+            }
+            PlayerState::Standing(Direction::Down) => {
+                let standing_sprites_idx =
+                    self.standing_sprites_idx % self.standing_down_sprites.len();
+                &mut self.standing_down_sprites[standing_sprites_idx]
+            }
+            PlayerState::Walking {
+                direction: Direction::Left,
+                sprites_idx,
+                ..
+            }
+            | PlayerState::Walking {
+                direction: Direction::Right,
+                sprites_idx,
+                ..
+            } => {
+                let walking_sprites_idx = sprites_idx % self.walking_side_sprites.len();
+                &mut self.walking_side_sprites[walking_sprites_idx]
+            }
+            PlayerState::Walking {
+                direction: Direction::Down,
+                sprites_idx,
+                ..
+            } => {
+                let walking_sprites_idx = sprites_idx % self.walking_down_sprites.len();
+                &mut self.walking_down_sprites[walking_sprites_idx]
+            }
+            PlayerState::Walking {
+                direction: Direction::Up,
+                sprites_idx,
+                ..
+            } => {
+                let walking_sprites_idx = sprites_idx % self.walking_up_sprites.len();
+                &mut self.walking_up_sprites[walking_sprites_idx]
             }
         };
         image.execute(|image| {

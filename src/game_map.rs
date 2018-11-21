@@ -44,7 +44,7 @@ impl GameMap {
                 )
             })
             .collect();
-        let grid: GridMap = Self::to_grid(&map.layers[0]);
+        let grid: GridMap = Self::to_grid(map.layers);
         for row in grid.iter() {
             println!("{:?}", row);
         }
@@ -52,9 +52,10 @@ impl GameMap {
     }
 
     pub fn draw(&mut self, window: &mut Window) {
-        self.layers[0].draw(window);
-        self.layers[1].draw(window);
-        self.layers[2].draw(window);
+        let len = self.layers.len();
+        for i in 0..len {
+            self.layers[i].draw(window);
+        }
     }
 
     pub fn can_walk_to(&self, (x, y): (u32, u32)) -> bool {
@@ -67,24 +68,44 @@ impl GameMap {
         match self.grid[y][x] {
             Grid::Path => true,
             Grid::NonPath => false,
+            Grid::Empty => false,
         }
     }
 
-    fn to_grid(layer: &tiled::Layer) -> GridMap {
-        layer
-            .tiles
+    fn to_grid(layers: Vec<tiled::Layer>) -> GridMap {
+        layers
             .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|tile| {
-                        if PATH_SET.contains(tile) {
-                            return Grid::Path;
-                        }
-                        Grid::NonPath
+            .map(|layer| {
+                layer
+                    .tiles
+                    .iter()
+                    .map(|row| {
+                        row.iter()
+                            .map(|tile| {
+                                if tile == &0 {
+                                    return Grid::Empty;
+                                }
+                                if PATH_SET.contains(tile) {
+                                    return Grid::Path;
+                                }
+                                Grid::NonPath
+                            })
+                            .collect()
                     })
                     .collect()
             })
-            .collect()
+            .fold(None, |a, b| match a {
+                None => Some(b),
+                Some(a) => Some(Self::join(a, b)),
+            })
+            .unwrap()
+    }
+
+    fn join(a: GridMap, b: GridMap) -> GridMap {
+        a
+        //     a.iter()
+        //         .map(|row| row.iter().map(|grid| grid.clone()).collect())
+        //         .collect()
     }
 
     fn to_game_layer(
@@ -97,7 +118,7 @@ impl GameMap {
             .tiles
             .iter()
             .map(|row| {
-                if layer.name == "Ground" {
+                if layer.name == "Fence" {
                     println!("{:?}", row);
                 }
                 row.iter()

@@ -7,6 +7,7 @@ use quicksilver::geom::{Rectangle, Vector};
 pub enum Grid {
     Path,
     NonPath,
+    Empty,
 }
 
 const PLAYER_X_OFFSET: u32 = TILE_WIDTH * 2;
