@@ -1,4 +1,6 @@
-// Draw some multi-colored geometry to the screen
+#[macro_use]
+
+extern crate lazy_static;
 extern crate nalgebra;
 extern crate quicksilver;
 extern crate tiled;
@@ -49,7 +51,7 @@ impl State for RoboRex {
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
         self.time += window.update_rate();
-        self.player.update(window)?;
+        self.player.update(window, &self.game_map)?;
         Ok(())
     }
 

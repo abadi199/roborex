@@ -1,5 +1,6 @@
 use constant::WALKING_DURATION;
 use direction::Direction;
+use game_map::GameMap;
 use grid::Grid;
 use player_state::PlayerState;
 use quicksilver::{
@@ -52,7 +53,7 @@ impl Player {
             || keyboard[Key::Down].is_down()
     }
 
-    pub fn update(&mut self, window: &mut Window) -> Result<()> {
+    pub fn update(&mut self, window: &mut Window, game_map: &GameMap) -> Result<()> {
         let update_rate = window.update_rate();
         self.standing_tick += update_rate;
 
@@ -74,22 +75,22 @@ impl Player {
                     Direction::Down => self.position.1 += 1,
                 };
                 if !Self::is_walking_button_pressed(window.keyboard()) {
-                    self.state = self.state.stop();
+                    self.stop();
                 } else {
                     if window.keyboard()[Key::Right].is_down() {
-                        self.walk(Direction::Right);
+                        self.walk(Direction::Right, game_map);
                     }
 
                     if window.keyboard()[Key::Left].is_down() {
-                        self.walk(Direction::Left);
+                        self.walk(Direction::Left, game_map);
                     }
 
                     if window.keyboard()[Key::Up].is_down() {
-                        self.walk(Direction::Up);
+                        self.walk(Direction::Up, game_map);
                     }
 
                     if window.keyboard()[Key::Down].is_down() {
-                        self.walk(Direction::Down);
+                        self.walk(Direction::Down, game_map);
                     }
                 }
             } else {
@@ -110,19 +111,19 @@ impl Player {
         }
 
         if window.keyboard()[Key::Right].is_down() && !self.is_walking() {
-            self.walk(Direction::Right);
+            self.walk(Direction::Right, game_map);
         }
 
         if window.keyboard()[Key::Left].is_down() && !self.is_walking() {
-            self.walk(Direction::Left);
+            self.walk(Direction::Left, game_map);
         }
 
         if window.keyboard()[Key::Up].is_down() && !self.is_walking() {
-            self.walk(Direction::Up);
+            self.walk(Direction::Up, game_map);
         }
 
         if window.keyboard()[Key::Down].is_down() && !self.is_walking() {
-            self.walk(Direction::Down);
+            self.walk(Direction::Down, game_map);
         }
 
         Ok(())
@@ -135,16 +136,36 @@ impl Player {
         }
     }
 
-    fn walk(&mut self, direction: Direction) {
-        self.standing_tick = 0.;
-        self.standing_sprites_idx = 0;
-        self.state = PlayerState::Walking {
-            direction,
-            grid_count: 1,
-            timer: WALKING_DURATION,
-            sprites_idx: 0,
-            tick: 0.,
-        };
+    fn next_position(&self, direction: Direction) -> (u32, u32) {
+        match direction {
+            Direction::Right => (self.position.0 + 1, self.position.1),
+            Direction::Left if self.position.0 < 1 => self.position,
+            Direction::Left => (self.position.0 - 1, self.position.1),
+            Direction::Up if self.position.1 < 1 => self.position,
+            Direction::Up => (self.position.0, self.position.1 - 1),
+            Direction::Down => (self.position.0, self.position.1 + 1),
+        }
+    }
+
+    fn stop(&mut self) {
+        self.state = self.state.stop();
+    }
+
+    fn walk(&mut self, direction: Direction, game_map: &GameMap) {
+        let next_position = self.next_position(direction);
+        if game_map.can_walk_to(next_position) && self.position != next_position {
+            self.standing_tick = 0.;
+            self.standing_sprites_idx = 0;
+            self.state = PlayerState::Walking {
+                direction,
+                grid_count: 1,
+                timer: WALKING_DURATION,
+                sprites_idx: 0,
+                tick: 0.,
+            };
+        } else {
+            self.stop();
+        }
     }
 
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {

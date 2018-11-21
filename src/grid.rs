@@ -3,6 +3,7 @@ use direction::Direction;
 use player_state::PlayerState;
 use quicksilver::geom::{Rectangle, Vector};
 
+#[derive(Debug)]
 pub enum Grid {
     Path,
     NonPath,

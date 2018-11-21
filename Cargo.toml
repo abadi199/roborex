@@ -7,3 +7,4 @@ authors = ["Abadi Kurniawan <abadi.kurniawan@gmail.com>"]
 quicksilver = "0.3.2"
 nalgebra = "0.16.10"
 tiled = "0.8.0"
+lazy_static = "1.2.0"
