@@ -26,11 +26,9 @@ impl Grid {
         )
     }
 
-    pub fn to_coordinate((x, y): (u32, u32)) -> Vector {
-        Vector::new(
-            (x * GRID_WIDTH) + GRID_X_OFFSET,
-            (y * GRID_HEIGHT) + GRID_Y_OFFSET,
-        )
+    pub fn from_coordinate(coordinate: Vector) -> (u32, u32) {
+        (((coordinate.x - GRID_X_OFFSET as f32)/ GRID_WIDTH as f32) as u32 ,
+        ((coordinate.y - GRID_Y_OFFSET as f32)/ GRID_HEIGHT as f32) as u32)
     }
 
     pub fn to_player_coordinate(state: &PlayerState, (x, y): (u32, u32)) -> Vector {

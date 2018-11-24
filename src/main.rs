@@ -23,13 +23,8 @@ use quicksilver::{
     geom::Vector,
     graphics::Color,
     lifecycle::{run, Asset, Settings, State, Window},
-    load_file, Result,
+    Result,
 };
-
-
-use std::path::{Path, PathBuf};
-use tiled::parse;
-use std::str;
 
 struct RoboRex {
     time: f64,

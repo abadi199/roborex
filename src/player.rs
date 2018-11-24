@@ -1,4 +1,4 @@
-use constant::{SCALING_FACTOR, TILE_WIDTH, WALKING_DURATION};
+use constant::{SCALING_FACTOR, WALKING_DURATION};
 use direction::Direction;
 use game_map::GameMap;
 use grid::Grid;
@@ -6,7 +6,7 @@ use player_state::PlayerState;
 use quicksilver::{
     geom::{Shape, Transform, Vector},
     graphics::{Background::Img, Image},
-    input::{Key, Keyboard},
+    input::{Key, Keyboard, MouseButton, ButtonState},
     lifecycle::{Asset, Window},
     Result,
 };
@@ -90,9 +90,13 @@ impl Player {
             sprites_idx,
             tick,
             timer,
-            ..
+            grid_count, 
         } = self.state
         {
+            if !game_map.can_walk_to(self.next_position(direction)) {
+                self.stop();
+                return Ok(());
+            }
             if timer <= 0. {
                 match direction {
                     Direction::Right => self.position.0 += 1,
@@ -102,7 +106,10 @@ impl Player {
                     Direction::Up => self.position.1 -= 1,
                     Direction::Down => self.position.1 += 1,
                 };
-                if !Self::is_walking_button_pressed(window.keyboard()) {
+                if grid_count > 1 {
+                    self.state.grid_count(grid_count - 1);
+                    self.state.timer(WALKING_DURATION);
+               } else if !Self::is_walking_button_pressed(window.keyboard()) {
                     self.stop();
                 } else {
                     if window.keyboard()[Key::Right].is_down() {
@@ -154,6 +161,12 @@ impl Player {
             self.walk(Direction::Down, game_map);
         }
 
+        if window.mouse()[MouseButton::Left] == ButtonState::Released && !self.is_walking() {
+            let mouse_pos = window.mouse().pos();
+            let grid_coordinate = Grid::from_coordinate(mouse_pos);
+            self.walk_to(grid_coordinate);
+        }
+
         Ok(())
     }
 
@@ -176,7 +189,7 @@ impl Player {
     }
 
     fn stop(&mut self) {
-        self.state = self.state.stop();
+        self.state = PlayerState::stop(&self.state);
     }
 
     fn walk(&mut self, direction: Direction, game_map: &GameMap) {
@@ -195,6 +208,38 @@ impl Player {
             self.stop();
         }
     }
+
+    fn walk_to(&mut self, (x, y): (u32, u32)) {
+        let (direction_x, grid_count_x) = match x > self.position.0 {
+            true => (Direction::Right, x - self.position.0),
+            false if x < self.position.0 => (Direction::Left, self.position.0 - x),
+            _ => (Direction::Right, 0),
+        };
+
+        let (direction_y, grid_count_y) = match y > self.position.1 {
+            true => (Direction::Down, y - self.position.1),
+            false if y < self.position.1 => (Direction::Up, self.position.1 - y),
+            _ => (Direction::Right, 0),
+        };
+
+        self.state = match (grid_count_x, grid_count_y) {
+            (0, 0) => PlayerState::stop(&self.state),
+            _ if grid_count_x >= grid_count_y => PlayerState::Walking {
+                direction: direction_x,
+                grid_count: grid_count_x,
+                timer: WALKING_DURATION,
+                sprites_idx: 0,
+                tick: 0.,
+            },
+            _ => PlayerState::Walking {
+                direction: direction_y,
+                grid_count: grid_count_y,
+                timer: WALKING_DURATION,
+                sprites_idx: 0,
+                tick: 0.,
+            }
+        };
+   }
 
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {
         let player_coordinate = Grid::to_player_coordinate(&self.state, self.position);

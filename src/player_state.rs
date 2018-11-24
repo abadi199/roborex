@@ -46,8 +46,8 @@ impl PlayerState {
 }
 
 impl PlayerState {
-    pub fn stop(&self) -> Self {
-        match self {
+    pub fn stop(current_state: &Self) -> Self {
+        match current_state {
             PlayerState::Walking { direction, .. } => PlayerState::Standing(direction.clone()),
             PlayerState::Standing(direction) => PlayerState::Standing(direction.clone()),
         }
