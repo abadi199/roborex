@@ -1,8 +1,12 @@
 #[macro_use]
-
 extern crate lazy_static;
+
+extern crate futures;
 extern crate nalgebra;
 extern crate quicksilver;
+
+// #[macro_use]
+// extern crate stdweb;
 extern crate tiled;
 
 mod constant;
@@ -18,55 +22,58 @@ use player::Player;
 use quicksilver::{
     geom::Vector,
     graphics::Color,
-    lifecycle::{run, Settings, State, Window},
-    Result,
+    lifecycle::{run, Asset, Settings, State, Window},
+    load_file, Result,
 };
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
-use tiled::parse;
 
-// A unit struct that we're going to use to run the Quicksilver functions
+
+use std::path::{Path, PathBuf};
+use tiled::parse;
+use std::str;
+
 struct RoboRex {
     time: f64,
     player: Player,
-    game_map: GameMap,
+    game_map: Asset<GameMap>,
 }
 
 impl State for RoboRex {
-    // Initialize the struct
     fn new() -> Result<RoboRex> {
-        let file = File::open(&Path::new("resources/tiled/level.tmx")).unwrap();
-        println!("Opened file");
-        let reader = BufReader::new(file);
-        let map = parse(reader).unwrap();
-        let game_map = GameMap::load(map);
+        let game_map_asset = Asset::new(GameMap::load("resources/tiled/level.tmx"));
 
-        Ok(RoboRex {
+        let roborex = RoboRex {
             time: 0.,
             player: Player::new(),
-            game_map,
-        })
+            game_map: game_map_asset,
+        };
+
+        Ok(roborex)
     }
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
         self.time += window.update_rate();
-        self.player.update(window, &self.game_map)?;
-        Ok(())
+        let player = &mut self.player;
+        self.game_map.execute(|game_map| {
+            player.update(window, game_map)?;
+            Ok(())
+        })?;
+
+       Ok(())
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
-        self.game_map.draw(window);
-        self.player.draw(window)?;
+        let player = &mut self.player;
+        self.game_map.execute(|game_map| {
+            game_map.draw(window)?;
+            player.draw(window)?;
+            Ok(())
+        })?;
+
         Ok(())
     }
 }
 
-// The main isn't that important in Quicksilver: it just serves as an entrypoint into the event
-// loop
 fn main() {
-    // Run with DrawGeometry as the event handler, with a window title of 'Draw Geometry' and a
-    // size of (800, 600)
     run::<RoboRex>("RoboRex", Vector::new(512, 512), Settings::default());
 }

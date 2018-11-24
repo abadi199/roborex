@@ -274,7 +274,7 @@ impl Player {
                 &image.area().with_center(player_coordinate),
                 Img(&image),
                 transformation,
-                1,
+                2,
             );
             Ok(())
         })

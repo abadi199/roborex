@@ -1,18 +1,16 @@
+use futures::{future, Future};
 use game_layer::GameLayer;
 use grid::Grid;
 use quicksilver::{
     geom::Rectangle,
     graphics::Image,
     lifecycle::{Asset, Window},
+    load_file, Error, Result
 };
 use std::cmp::max;
 use std::collections::HashSet;
+use std::path::{PathBuf, Path};
 use tiled;
-
-pub struct GameMap {
-    layers: Vec<GameLayer>,
-    grid: GridMap,
-}
 
 lazy_static! {
     static ref PATH_SET: HashSet<u32> = {
@@ -29,10 +27,23 @@ lazy_static! {
     };
 }
 
+pub struct GameMap {
+    layers: Vec<GameLayer>,
+    grid: GridMap,
+}
+
 type GridMap = Vec<Vec<Grid>>;
 
 impl GameMap {
-    pub fn load(map: tiled::Map) -> Self {
+    pub fn load<'a, P: 'static + AsRef<Path>>(path: P) -> impl Future<Item = GameMap, Error = Error> {
+        load_file(PathBuf::from(path.as_ref()))
+            .map(|data| Self::from_bytes(data.as_slice()))
+            .and_then(future::result)
+    }
+
+    pub fn from_bytes(raw: &[u8]) -> Result<GameMap> {
+        let map = tiled::parse(raw)
+            .map_err(|_| Error::ContextError("Error loading level".to_string()))?;
         let layers: Vec<GameLayer> = map
             .layers
             .iter()
@@ -46,14 +57,16 @@ impl GameMap {
             })
             .collect();
         let grid: GridMap = Self::to_grid(map.layers);
-        GameMap { layers, grid }
+        Ok(GameMap { layers, grid })
     }
 
-    pub fn draw(&mut self, window: &mut Window) {
+    pub fn draw(&mut self, window: &mut Window) -> Result<()> {
         let len = self.layers.len();
         for i in 0..len {
-            self.layers[i].draw(window);
+            self.layers[i].draw(window)?;
         }
+
+        Ok(())
     }
 
     pub fn can_walk_to(&self, (x, y): (u32, u32)) -> bool {

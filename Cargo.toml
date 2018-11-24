@@ -5,6 +5,8 @@ authors = ["Abadi Kurniawan <abadi.kurniawan@gmail.com>"]
 
 [dependencies]
 quicksilver = "0.3.2"
+lazy_static = "1.2.0"
 nalgebra = "0.16.10"
 tiled = "0.8.0"
-lazy_static = "1.2.0"
+futures = "0.1"
+# stdweb = "0.4.10"

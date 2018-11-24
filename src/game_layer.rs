@@ -2,7 +2,7 @@ use grid::Grid;
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
     graphics::{Background::Img, Image},
-    lifecycle::{Asset, Window},
+    lifecycle::{Asset, Window}, Result,
 };
 
 pub struct GameLayer {
@@ -11,7 +11,7 @@ pub struct GameLayer {
 }
 
 impl GameLayer {
-    pub fn draw(&mut self, window: &mut Window) {
+    pub fn draw(&mut self, window: &mut Window) -> Result<()> {
         let rectangles = &self.rectangles;
         self.image.execute(|image| {
             for (y, row) in rectangles.iter().enumerate() {
@@ -28,6 +28,8 @@ impl GameLayer {
                 }
             }
             Ok(())
-        });
+        })?;
+
+        Ok(())
     }
 }
