@@ -5,11 +5,11 @@ use quicksilver::{
     geom::Rectangle,
     graphics::Image,
     lifecycle::{Asset, Window},
-    load_file, Error, Result
+    load_file, Error, Result,
 };
 use std::cmp::max;
 use std::collections::HashSet;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use tiled;
 
 lazy_static! {
@@ -35,7 +35,9 @@ pub struct GameMap {
 type GridMap = Vec<Vec<Grid>>;
 
 impl GameMap {
-    pub fn load<'a, P: 'static + AsRef<Path>>(path: P) -> impl Future<Item = GameMap, Error = Error> {
+    pub fn load<'a, P: 'static + AsRef<Path>>(
+        path: P,
+    ) -> impl Future<Item = GameMap, Error = Error> {
         load_file(PathBuf::from(path.as_ref()))
             .map(|data| Self::from_bytes(data.as_slice()))
             .and_then(future::result)
@@ -54,8 +56,7 @@ impl GameMap {
                     map.tile_height,
                     &map.tilesets[0].images[0],
                 )
-            })
-            .collect();
+            }).collect();
         let grid: GridMap = Self::to_grid(map.layers);
         Ok(GameMap { layers, grid })
     }
@@ -100,16 +101,12 @@ impl GameMap {
                                     return Grid::Path;
                                 }
                                 Grid::NonPath
-                            })
-                            .collect()
-                    })
-                    .collect()
-            })
-            .fold(None, |a, b| match a {
+                            }).collect()
+                    }).collect()
+            }).fold(None, |a, b| match a {
                 None => Some(b),
                 Some(a) => Some(Self::join(a, b)),
-            })
-            .unwrap()
+            }).unwrap()
     }
 
     fn join(a: GridMap, b: GridMap) -> GridMap {
@@ -134,10 +131,8 @@ impl GameMap {
                             (_, Grid::NonPath) => Grid::NonPath,
                             (Grid::NonPath, _) => Grid::NonPath,
                         }
-                    })
-                    .collect()
-            })
-            .collect();
+                    }).collect()
+            }).collect();
 
         new_grid
     }
@@ -155,8 +150,7 @@ impl GameMap {
                 row.iter()
                     .map(|tile: &u32| Self::to_rectangle(*tile, tile_width, tile_height, image))
                     .collect()
-            })
-            .collect();
+            }).collect();
         let image = Asset::new(Image::load(format!("resources/tiled/{}", image.source)));
         GameLayer { rectangles, image }
     }

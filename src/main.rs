@@ -20,8 +20,8 @@ mod player_state;
 use game_map::GameMap;
 use player::Player;
 use quicksilver::{
-    geom::Vector,
-    graphics::Color,
+    geom::{Shape, Transform, Vector},
+    graphics::{Background::Img, Color, Font, FontStyle},
     lifecycle::{run, Asset, Settings, State, Window},
     Result,
 };
@@ -30,16 +30,19 @@ struct RoboRex {
     time: f64,
     player: Player,
     game_map: Asset<GameMap>,
+    font: Asset<Font>,
 }
 
 impl State for RoboRex {
     fn new() -> Result<RoboRex> {
-        let game_map_asset = Asset::new(GameMap::load("resources/tiled/level.tmx"));
+        let game_map = Asset::new(GameMap::load("resources/tiled/level.tmx"));
+        let font = Asset::new(Font::load("resources/fonts/slkscr.ttf"));
 
         let roborex = RoboRex {
             time: 0.,
             player: Player::new(),
-            game_map: game_map_asset,
+            game_map,
+            font,
         };
 
         Ok(roborex)
@@ -53,15 +56,35 @@ impl State for RoboRex {
             Ok(())
         })?;
 
-       Ok(())
+        Ok(())
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
-        window.clear(Color::WHITE)?;
+        window.clear(Color::BLACK)?;
         let player = &mut self.player;
         self.game_map.execute(|game_map| {
             game_map.draw(window)?;
             player.draw(window)?;
+            Ok(())
+        })?;
+
+        self.font.execute(|font| {
+            let big = FontStyle::new(72.0, Color::WHITE);
+            let normal = FontStyle::new(42.0, Color::WHITE);
+            let word = font.render("Apple", &big)?;
+            let instruction = font.render("Find all the letters for the word:", &normal)?;
+            window.draw_ex(
+                &instruction.area().with_center((1920 / 2, 30)),
+                Img(&instruction),
+                Transform::scale(Vector::new(1, 1)),
+                4,
+            );
+            window.draw_ex(
+                &word.area().with_center((1920 / 2, 90)),
+                Img(&word),
+                Transform::scale(Vector::new(1, 1)),
+                4,
+            );
             Ok(())
         })?;
 
@@ -70,5 +93,5 @@ impl State for RoboRex {
 }
 
 fn main() {
-    run::<RoboRex>("RoboRex", Vector::new(512, 512), Settings::default());
+    run::<RoboRex>("RoboRex", Vector::new(1920, 1080), Settings::default());
 }

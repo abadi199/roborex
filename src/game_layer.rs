@@ -2,7 +2,8 @@ use grid::Grid;
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
     graphics::{Background::Img, Image},
-    lifecycle::{Asset, Window}, Result,
+    lifecycle::{Asset, Window},
+    Result,
 };
 
 pub struct GameLayer {

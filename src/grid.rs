@@ -11,9 +11,9 @@ pub enum Grid {
 }
 
 const PLAYER_X_OFFSET: u32 = TILE_WIDTH * 2;
-const PLAYER_Y_OFFSET: u32 = TILE_HEIGHT + (TILE_WIDTH / 2);
+const PLAYER_Y_OFFSET: u32 = TILE_HEIGHT + (TILE_HEIGHT / 2) + (TILE_HEIGHT * 8);
 const GRID_X_OFFSET: u32 = TILE_WIDTH / 2;
-const GRID_Y_OFFSET: u32 = TILE_HEIGHT / 2;
+const GRID_Y_OFFSET: u32 = TILE_HEIGHT / 2 + (TILE_HEIGHT * 8);
 
 impl Grid {
     pub fn to_rectangle(x: u32, y: u32) -> Rectangle {
@@ -27,8 +27,10 @@ impl Grid {
     }
 
     pub fn from_coordinate(coordinate: Vector) -> (u32, u32) {
-        (((coordinate.x - GRID_X_OFFSET as f32)/ GRID_WIDTH as f32) as u32 ,
-        ((coordinate.y - GRID_Y_OFFSET as f32)/ GRID_HEIGHT as f32) as u32)
+        (
+            ((coordinate.x - GRID_X_OFFSET as f32) / GRID_WIDTH as f32) as u32,
+            ((coordinate.y - GRID_Y_OFFSET as f32) / GRID_HEIGHT as f32) as u32,
+        )
     }
 
     pub fn to_player_coordinate(state: &PlayerState, (x, y): (u32, u32)) -> Vector {
