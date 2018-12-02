@@ -9,6 +9,7 @@ use quicksilver::{
 };
 use std::cmp::max;
 use std::collections::HashSet;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use tiled;
 
@@ -20,9 +21,26 @@ lazy_static! {
         m.insert(221);
         m.insert(271);
         m.insert(246);
+        m.insert(248);
         m.insert(269);
         m.insert(268);
         m.insert(270);
+        m.insert(277);
+        m.insert(278);
+        m.insert(279);
+        m.insert(280);
+        m.insert(256);
+        m.insert(228);
+        m.insert(229);
+        m.insert(230);
+        m.insert(231);
+        m.insert(232);
+        m.insert(233);
+        m.insert(234);
+        m.insert(154);
+        m.insert(155);
+        m.insert(160);
+        m.insert(161);
         m
     };
 }
@@ -58,7 +76,9 @@ impl GameMap {
                 )
             }).collect();
         let grid: GridMap = Self::to_grid(map.layers);
-        Ok(GameMap { layers, grid })
+        let game_map = GameMap { layers, grid };
+        println!("{:?}", game_map);
+        Ok(game_map)
     }
 
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {
@@ -143,8 +163,12 @@ impl GameMap {
         tile_height: u32,
         image: &tiled::Image,
     ) -> GameLayer {
-        let rectangles = layer
+        let tiles: Vec<Vec<u32>> = layer
             .tiles
+            .iter()
+            .map(|row| row.iter().map(|tile: &u32| tile.clone()).collect())
+            .collect();
+        let rectangles = tiles
             .iter()
             .map(|row| {
                 row.iter()
@@ -152,7 +176,12 @@ impl GameMap {
                     .collect()
             }).collect();
         let image = Asset::new(Image::load(format!("resources/tiled/{}", image.source)));
-        GameLayer { rectangles, image }
+        GameLayer {
+            name: layer.name.clone(),
+            tiles,
+            rectangles,
+            image,
+        }
     }
 
     fn to_rectangle(
@@ -171,5 +200,19 @@ impl GameMap {
                 (tile_width as f32, tile_height as f32),
             )),
         }
+    }
+}
+
+impl fmt::Debug for GameMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for layer in self.layers.iter() {
+            writeln!(f, "{:?}", layer)?;
+        }
+
+        for row in self.grid.iter() {
+            writeln!(f, "{:?}", row)?;
+        }
+
+        Ok(())
     }
 }

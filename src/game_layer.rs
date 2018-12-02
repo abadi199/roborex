@@ -5,8 +5,11 @@ use quicksilver::{
     lifecycle::{Asset, Window},
     Result,
 };
+use std::fmt;
 
 pub struct GameLayer {
+    pub name: String,
+    pub tiles: Vec<Vec<u32>>,
     pub rectangles: Vec<Vec<Option<Rectangle>>>,
     pub image: Asset<Image>,
 }
@@ -30,6 +33,17 @@ impl GameLayer {
             }
             Ok(())
         })?;
+
+        Ok(())
+    }
+}
+
+impl fmt::Debug for GameLayer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "Name: {}", self.name)?;
+        for row in self.tiles.iter() {
+            writeln!(f, "{:?}", row)?;
+        }
 
         Ok(())
     }

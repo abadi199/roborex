@@ -69,18 +69,26 @@ impl State for RoboRex {
         })?;
 
         self.font.execute(|font| {
-            let big = FontStyle::new(72.0, Color::WHITE);
-            let normal = FontStyle::new(42.0, Color::WHITE);
+            let big = FontStyle::new(42.0, Color::WHITE);
+            let normal = FontStyle::new(24.0, Color::WHITE);
             let word = font.render("Apple", &big)?;
             let instruction = font.render("Find all the letters for the word:", &normal)?;
+            let instruction_height = instruction.area().height() as u32;
+            let word_height = word.area().height() as u32;
             window.draw_ex(
-                &instruction.area().with_center((1920 / 2, 30)),
+                &instruction.area().with_center((
+                    constant::WINDOW_WIDTH / 2,
+                    constant::WINDOW_HEIGHT - (instruction_height + word_height),
+                )),
                 Img(&instruction),
                 Transform::scale(Vector::new(1, 1)),
                 4,
             );
             window.draw_ex(
-                &word.area().with_center((1920 / 2, 90)),
+                &word.area().with_center((
+                    constant::WINDOW_WIDTH / 2,
+                    constant::WINDOW_HEIGHT - word_height,
+                )),
                 Img(&word),
                 Transform::scale(Vector::new(1, 1)),
                 4,
@@ -93,5 +101,9 @@ impl State for RoboRex {
 }
 
 fn main() {
-    run::<RoboRex>("RoboRex", Vector::new(1920, 1080), Settings::default());
+    run::<RoboRex>(
+        "RoboRex",
+        Vector::new(constant::WINDOW_WIDTH, constant::WINDOW_HEIGHT),
+        Settings::default(),
+    );
 }

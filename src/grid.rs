@@ -2,8 +2,9 @@ use constant::{GRID_HEIGHT, GRID_WIDTH, TILE_HEIGHT, TILE_WIDTH, WALKING_DURATIO
 use direction::Direction;
 use player_state::PlayerState;
 use quicksilver::geom::{Rectangle, Vector};
+use std::fmt;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum Grid {
     Path,
     NonPath,
@@ -11,9 +12,9 @@ pub enum Grid {
 }
 
 const PLAYER_X_OFFSET: u32 = TILE_WIDTH * 2;
-const PLAYER_Y_OFFSET: u32 = TILE_HEIGHT + (TILE_HEIGHT / 2) + (TILE_HEIGHT * 8);
+const PLAYER_Y_OFFSET: u32 = TILE_HEIGHT + (TILE_HEIGHT / 2);
 const GRID_X_OFFSET: u32 = TILE_WIDTH / 2;
-const GRID_Y_OFFSET: u32 = TILE_HEIGHT / 2 + (TILE_HEIGHT * 8);
+const GRID_Y_OFFSET: u32 = TILE_HEIGHT / 2;
 
 impl Grid {
     pub fn to_rectangle(x: u32, y: u32) -> Rectangle {
@@ -74,5 +75,15 @@ impl Grid {
             (((x * GRID_WIDTH) + PLAYER_X_OFFSET) as i32 + delta_x as i32) as u32,
             (((y * GRID_HEIGHT) + PLAYER_Y_OFFSET) as i32 + delta_y as i32) as u32,
         )
+    }
+}
+
+impl fmt::Debug for Grid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Grid::Empty => write!(f, " "),
+            Grid::NonPath => write!(f, "#"),
+            Grid::Path => write!(f, "="),
+        }
     }
 }
