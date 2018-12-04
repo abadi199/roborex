@@ -9,19 +9,23 @@ extern crate quicksilver;
 // extern crate stdweb;
 extern crate tiled;
 
+mod collectible;
 mod constant;
 mod direction;
 mod game_layer;
 mod game_map;
 mod grid;
+mod instruction;
 mod player;
 mod player_state;
 
+use collectible::Collectible;
 use game_map::GameMap;
+use instruction::Instruction;
 use player::Player;
 use quicksilver::{
-    geom::{Shape, Transform, Vector},
-    graphics::{Background::Img, Color, Font, FontStyle},
+    geom::Vector,
+    graphics::Color,
     lifecycle::{run, Asset, Settings, State, Window},
     Result,
 };
@@ -30,19 +34,28 @@ struct RoboRex {
     time: f64,
     player: Player,
     game_map: Asset<GameMap>,
-    font: Asset<Font>,
+    instruction: Instruction,
+    collectible: Vec<Collectible>,
 }
 
 impl State for RoboRex {
     fn new() -> Result<RoboRex> {
         let game_map = Asset::new(GameMap::load("resources/tiled/level.tmx"));
-        let font = Asset::new(Font::load("resources/fonts/slkscr.ttf"));
+        let instruction = Instruction::new("Apple".to_string());
+        let collectible = vec![
+            Collectible::new('A', (5, 7)),
+            Collectible::new('P', (10, 12)),
+            Collectible::new('P', (18, 7)),
+            Collectible::new('L', (17, 11)),
+            Collectible::new('E', (22, 11)),
+        ];
 
         let roborex = RoboRex {
             time: 0.,
             player: Player::new(),
             game_map,
-            font,
+            instruction,
+            collectible,
         };
 
         Ok(roborex)
@@ -68,33 +81,12 @@ impl State for RoboRex {
             Ok(())
         })?;
 
-        self.font.execute(|font| {
-            let big = FontStyle::new(42.0, Color::WHITE);
-            let normal = FontStyle::new(24.0, Color::WHITE);
-            let word = font.render("Apple", &big)?;
-            let instruction = font.render("Find all the letters for the word:", &normal)?;
-            let instruction_height = instruction.area().height() as u32;
-            let word_height = word.area().height() as u32;
-            window.draw_ex(
-                &instruction.area().with_center((
-                    constant::WINDOW_WIDTH / 2,
-                    constant::WINDOW_HEIGHT - (instruction_height + word_height),
-                )),
-                Img(&instruction),
-                Transform::scale(Vector::new(1, 1)),
-                4,
-            );
-            window.draw_ex(
-                &word.area().with_center((
-                    constant::WINDOW_WIDTH / 2,
-                    constant::WINDOW_HEIGHT - word_height,
-                )),
-                Img(&word),
-                Transform::scale(Vector::new(1, 1)),
-                4,
-            );
-            Ok(())
-        })?;
+        self.instruction.draw(window)?;
+
+        let collectible = &mut self.collectible;
+        for c in collectible.into_iter() {
+            c.draw(window)?;
+        }
 
         Ok(())
     }

@@ -1,4 +1,4 @@
-use constant::{SCALING_FACTOR, WALKING_DURATION};
+use constant::{PLAYER_Z, SCALING_FACTOR, WALKING_DURATION};
 use direction::Direction;
 use game_map::GameMap;
 use grid::Grid;
@@ -6,7 +6,7 @@ use player_state::PlayerState;
 use quicksilver::{
     geom::{Shape, Transform, Vector},
     graphics::{Background::Img, Image},
-    input::{Key, Keyboard, MouseButton, ButtonState},
+    input::{ButtonState, Key, Keyboard, MouseButton},
     lifecycle::{Asset, Window},
     Result,
 };
@@ -90,7 +90,7 @@ impl Player {
             sprites_idx,
             tick,
             timer,
-            grid_count, 
+            grid_count,
         } = self.state
         {
             if !game_map.can_walk_to(self.next_position(direction)) {
@@ -109,7 +109,7 @@ impl Player {
                 if grid_count > 1 {
                     self.state.grid_count(grid_count - 1);
                     self.state.timer(WALKING_DURATION);
-               } else if !Self::is_walking_button_pressed(window.keyboard()) {
+                } else if !Self::is_walking_button_pressed(window.keyboard()) {
                     self.stop();
                 } else {
                     if window.keyboard()[Key::Right].is_down() {
@@ -190,6 +190,7 @@ impl Player {
 
     fn stop(&mut self) {
         self.state = PlayerState::stop(&self.state);
+        println!("{:?}", Grid::to_rectangle(self.position.0, self.position.1));
     }
 
     fn walk(&mut self, direction: Direction, game_map: &GameMap) {
@@ -237,9 +238,9 @@ impl Player {
                 timer: WALKING_DURATION,
                 sprites_idx: 0,
                 tick: 0.,
-            }
+            },
         };
-   }
+    }
 
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {
         let player_coordinate = Grid::to_player_coordinate(&self.state, self.position);
@@ -319,7 +320,7 @@ impl Player {
                 &image.area().with_center(player_coordinate),
                 Img(&image),
                 transformation,
-                2,
+                PLAYER_Z,
             );
             Ok(())
         })

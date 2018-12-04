@@ -11,12 +11,24 @@ pub enum Grid {
     Empty,
 }
 
+const COLLECTIBLE_X_OFFSET: u32 = TILE_WIDTH * 2;
+const COLLECTIBLE_Y_OFFSET: u32 = TILE_HEIGHT * 2;
 const PLAYER_X_OFFSET: u32 = TILE_WIDTH * 2;
 const PLAYER_Y_OFFSET: u32 = TILE_HEIGHT + (TILE_HEIGHT / 2);
 const GRID_X_OFFSET: u32 = TILE_WIDTH / 2;
 const GRID_Y_OFFSET: u32 = TILE_HEIGHT / 2;
 
 impl Grid {
+    pub fn to_collectible_coordinate(x: u32, y: u32) -> Rectangle {
+        Rectangle::new(
+            (
+                (x * GRID_WIDTH) + COLLECTIBLE_X_OFFSET,
+                (y * GRID_HEIGHT) + COLLECTIBLE_Y_OFFSET,
+            ),
+            (TILE_WIDTH, TILE_HEIGHT),
+        )
+    }
+
     pub fn to_rectangle(x: u32, y: u32) -> Rectangle {
         Rectangle::new(
             (
