@@ -21,6 +21,7 @@ mod player_state;
 
 use collectible::Collectible;
 use game_map::GameMap;
+use instruction::CanCollect;
 use instruction::Instruction;
 use player::Player;
 use quicksilver::{
@@ -41,7 +42,7 @@ struct RoboRex {
 impl State for RoboRex {
     fn new() -> Result<RoboRex> {
         let game_map = Asset::new(GameMap::load("resources/tiled/level.tmx"));
-        let instruction = Instruction::new("Apple".to_string());
+        let instruction = Instruction::new("APPLE".to_string());
         let collectible = vec![
             Collectible::new('A', (5, 7)),
             Collectible::new('P', (10, 12)),
@@ -64,8 +65,18 @@ impl State for RoboRex {
     fn update(&mut self, window: &mut Window) -> Result<()> {
         self.time += window.update_rate();
         let player = &mut self.player;
+        let collectibles = &mut self.collectible;
+        let instruction = &mut self.instruction;
         self.game_map.execute(|game_map| {
             player.update(window, game_map)?;
+            for collectible in collectibles.into_iter() {
+                if collectible.collide_with(player) {
+                    match instruction.collect(collectible.letter) {
+                        CanCollect::Yes => collectible.collect(),
+                        CanCollect::No => {}
+                    }
+                }
+            }
             Ok(())
         })?;
 

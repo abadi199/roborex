@@ -77,7 +77,7 @@ impl GameMap {
             }).collect();
         let grid: GridMap = Self::to_grid(map.layers);
         let game_map = GameMap { layers, grid };
-        println!("{:?}", game_map);
+        // println!("{:?}", game_map);
         Ok(game_map)
     }
 

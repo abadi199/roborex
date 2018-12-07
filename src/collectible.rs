@@ -1,5 +1,6 @@
 use constant::COLLECTIBLE_Z;
 use grid::Grid;
+use player::Player;
 use quicksilver::{
     geom::{Shape, Transform, Vector},
     graphics::{Background::Img, Color, Font, FontStyle},
@@ -10,27 +11,39 @@ use quicksilver::{
 pub struct Collectible {
     pub status: Status,
     pub position: (u32, u32),
-    pub character: char,
+    pub letter: char,
     pub font: Asset<Font>,
 }
 
 impl Collectible {
-    pub fn new(character: char, position: (u32, u32)) -> Self {
+    pub fn new(letter: char, position: (u32, u32)) -> Self {
         let font = Asset::new(Font::load("resources/fonts/slkscr.ttf"));
         Collectible {
             status: Status::NotCollected,
             position,
-            character,
+            letter,
             font,
         }
     }
 
+    pub fn collect(&mut self) {
+        self.status = Status::Collected;
+    }
+
+    pub fn collide_with(&self, player: &Player) -> bool {
+        self.status == Status::NotCollected && self.position == player.position
+    }
+
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {
-        let character = &self.character;
+        if let Status::Collected = self.status {
+            return Ok(());
+        }
+
+        let letter = &self.letter;
         let position = &self.position;
         self.font.execute(|font| {
             let normal = FontStyle::new(24.0, Color::WHITE);
-            let word_text = font.render(&format!("{}", character), &normal)?;
+            let word_text = font.render(&letter.to_string(), &normal)?;
             let rectangle = Grid::to_collectible_coordinate(position.0, position.1);
 
             window.draw_ex(
@@ -46,6 +59,7 @@ impl Collectible {
     }
 }
 
+#[derive(PartialEq, Eq)]
 pub enum Status {
     NotCollected,
     Collected,

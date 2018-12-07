@@ -12,7 +12,7 @@ use quicksilver::{
 };
 
 pub struct Player {
-    position: (u32, u32),
+    pub position: (u32, u32),
     state: PlayerState,
     framerate: u32,
     standing_side_sprites: Vec<Asset<Image>>,
@@ -190,7 +190,6 @@ impl Player {
 
     fn stop(&mut self) {
         self.state = PlayerState::stop(&self.state);
-        println!("{:?}", Grid::to_rectangle(self.position.0, self.position.1));
     }
 
     fn walk(&mut self, direction: Direction, game_map: &GameMap) {
