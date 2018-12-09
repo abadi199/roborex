@@ -3,6 +3,7 @@ use quicksilver::{
     geom::{Shape, Transform, Vector},
     graphics::{Background::Img, Color, Font, FontStyle},
     lifecycle::{Asset, Window},
+    sound::Sound,
     Result,
 };
 
@@ -12,8 +13,13 @@ lazy_static! {
 }
 
 pub struct Instruction {
+    tick: f64,
     pub answer: Vec<Answered>,
     pub font: Asset<Font>,
+    pub instruction_sound: Asset<Sound>,
+    pub answer_sound: Asset<Sound>,
+    instruction_played_timestamp: f64,
+    word_played_timestamp: f64,
 }
 
 pub enum Answered {
@@ -39,7 +45,45 @@ impl Instruction {
     pub fn new(word: String) -> Self {
         let font = Asset::new(Font::load("resources/fonts/slkscr.ttf"));
         let answer = word.chars().map(|letter| Answered::No(letter)).collect();
-        Instruction { font, answer }
+        let instruction_sound = Asset::new(Sound::load("resources/sounds/instructions.ogg"));
+        let answer_sound = Asset::new(Sound::load(format!(
+            "resources/sounds/{}.ogg",
+            word.to_ascii_lowercase()
+        )));
+        Instruction {
+            tick: 0.,
+            font,
+            answer,
+            instruction_sound,
+            instruction_played_timestamp: 0.,
+            word_played_timestamp: 0.,
+            answer_sound,
+        }
+    }
+
+    pub fn update(&mut self, window: &mut Window) -> Result<()> {
+        self.tick = self.tick + window.update_rate();
+        let instruction_sound = &mut self.instruction_sound;
+        let answer_sound = &mut self.answer_sound;
+        if self.instruction_played_timestamp <= 0. {
+            self.instruction_played_timestamp = self.tick;
+            instruction_sound.execute(|instruction| {
+                instruction.play()?;
+                Ok(())
+            })?;
+        }
+
+        if self.word_played_timestamp <= 0.
+            && self.tick - self.instruction_played_timestamp >= 3000.
+        {
+            self.word_played_timestamp = self.tick;
+            answer_sound.execute(|answer| {
+                answer.play()?;
+                Ok(())
+            })?;
+        }
+
+        Ok(())
     }
 
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {

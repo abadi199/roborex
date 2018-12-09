@@ -77,6 +77,7 @@ impl State for RoboRex {
                     }
                 }
             }
+            instruction.update(window)?;
             Ok(())
         })?;
 
