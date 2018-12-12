@@ -12,7 +12,7 @@ lazy_static! {
     static ref NORMAL: FontStyle = FontStyle::new(24.0, Color::WHITE);
 }
 
-pub struct Instruction {
+pub struct Puzzle {
     tick: f64,
     pub answer: Vec<Answered>,
     pub font: Asset<Font>,
@@ -41,7 +41,7 @@ pub enum CanCollect {
     No,
 }
 
-impl Instruction {
+impl Puzzle {
     pub fn new(word: String) -> Self {
         let font = Asset::new(Font::load("resources/fonts/slkscr.ttf"));
         let answer = word.chars().map(|letter| Answered::No(letter)).collect();
@@ -50,7 +50,7 @@ impl Instruction {
             "resources/sounds/{}.ogg",
             word.to_ascii_lowercase()
         )));
-        Instruction {
+        Puzzle {
             tick: 0.,
             font,
             answer,
@@ -132,6 +132,16 @@ impl Instruction {
                 return CanCollect::Yes;
             }
         }
+    }
+
+    pub fn is_solved(&self) -> bool {
+        for answer in self.answer.iter() {
+            if let Answered::No(_) = answer {
+                return false;
+            }
+        }
+
+        true
     }
 
     fn find(&self, letter: char) -> Option<usize> {

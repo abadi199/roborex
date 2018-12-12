@@ -15,48 +15,42 @@ mod direction;
 mod game_layer;
 mod game_map;
 mod grid;
-mod instruction;
+mod level;
 mod player;
 mod player_state;
+mod puzzle;
 
-use collectible::Collectible;
-use game_map::GameMap;
-use instruction::CanCollect;
-use instruction::Instruction;
+use level::Level;
 use player::Player;
 use quicksilver::{
     geom::Vector,
     graphics::Color,
-    lifecycle::{run, Asset, Settings, State, Window},
+    lifecycle::{run, Settings, State, Window},
     Result,
 };
 
 struct RoboRex {
     time: f64,
     player: Player,
-    game_map: Asset<GameMap>,
-    instruction: Instruction,
-    collectible: Vec<Collectible>,
+    level: Level,
+}
+
+impl RoboRex {
+    fn start_level(&mut self, level: Level) {
+        self.level = level;
+        self.player.position = self.level.start_position;
+    }
 }
 
 impl State for RoboRex {
     fn new() -> Result<RoboRex> {
-        let game_map = Asset::new(GameMap::load("resources/tiled/level.tmx"));
-        let instruction = Instruction::new("APPLE".to_string());
-        let collectible = vec![
-            Collectible::new('A', (5, 7)),
-            Collectible::new('P', (10, 12)),
-            Collectible::new('P', (18, 7)),
-            Collectible::new('L', (17, 11)),
-            Collectible::new('E', (22, 11)),
-        ];
-
+        let level = Level::start();
+        let mut player = Player::new();
+        player.position = level.start_position;
         let roborex = RoboRex {
             time: 0.,
-            player: Player::new(),
-            game_map,
-            instruction,
-            collectible,
+            player,
+            level,
         };
 
         Ok(roborex)
@@ -64,42 +58,24 @@ impl State for RoboRex {
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
         self.time += window.update_rate();
-        let player = &mut self.player;
-        let collectibles = &mut self.collectible;
-        let instruction = &mut self.instruction;
-        self.game_map.execute(|game_map| {
-            player.update(window, game_map)?;
-            for collectible in collectibles.into_iter() {
-                if collectible.collide_with(player) {
-                    match instruction.collect(collectible.letter) {
-                        CanCollect::Yes => collectible.collect(),
-                        CanCollect::No => {}
-                    }
+        match self.level.update(window, &mut self.player)? {
+            level::Solved::Yes => {
+                println!("Level Solved!");
+                let next_level = self.level.next_level();
+                match next_level {
+                    Some(level) => self.start_level(level),
+                    None => panic!("Finish level not implemented yet"),
                 }
             }
-            instruction.update(window)?;
-            Ok(())
-        })?;
+            level::Solved::No => {}
+        };
 
         Ok(())
     }
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::BLACK)?;
-        let player = &mut self.player;
-        self.game_map.execute(|game_map| {
-            game_map.draw(window)?;
-            player.draw(window)?;
-            Ok(())
-        })?;
-
-        self.instruction.draw(window)?;
-
-        let collectible = &mut self.collectible;
-        for c in collectible.into_iter() {
-            c.draw(window)?;
-        }
-
+        self.level.draw(window, &mut self.player)?;
         Ok(())
     }
 }
