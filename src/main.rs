@@ -14,10 +14,12 @@ mod constant;
 mod direction;
 mod game_layer;
 mod game_map;
+mod gate;
 mod grid;
 mod level;
 mod player;
 mod player_state;
+mod primitive;
 mod puzzle;
 
 use level::Level;
@@ -61,11 +63,11 @@ impl State for RoboRex {
         match self.level.update(window, &mut self.player)? {
             level::Solved::Yes => {
                 println!("Level Solved!");
-                let next_level = self.level.next_level();
-                match next_level {
-                    Some(level) => self.start_level(level),
-                    None => panic!("Finish level not implemented yet"),
-                }
+                // let next_level = self.level.next_level();
+                // match next_level {
+                //     Some(level) => self.start_level(level),
+                //     None => panic!("Finish level not implemented yet"),
+                // }
             }
             level::Solved::No => {}
         };

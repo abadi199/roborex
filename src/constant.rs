@@ -8,4 +8,5 @@ pub const WINDOW_WIDTH: u32 = 800;
 pub const WINDOW_HEIGHT: u32 = 600;
 
 pub const COLLECTIBLE_Z: u32 = 10;
-pub const PLAYER_Z: u32 = 11;
+pub const GATE_Z: u32 = 11;
+pub const PLAYER_Z: u32 = 12;

@@ -1,6 +1,8 @@
 use collectible::Collectible;
 use game_map::GameMap;
+use gate::Gate;
 use player::Player;
+use primitive::Position;
 use puzzle::{CanCollect, Puzzle};
 use quicksilver::{
     lifecycle::{Asset, Window},
@@ -13,7 +15,6 @@ pub struct Level {
     game_map: Asset<GameMap>,
     puzzle: Puzzle,
     collectible: Vec<Collectible>,
-    gate_position: (u32, u32),
 }
 
 pub enum Solved {
@@ -39,7 +40,10 @@ impl Level {
     }
 
     fn level2() -> Self {
-        let game_map = Asset::new(GameMap::load("resources/tiled/level2.tmx"));
+        let game_map = Asset::new(GameMap::load(
+            "resources/tiled/level2.tmx",
+            Position::new(0, 0),
+        ));
         let puzzle = Puzzle::new("JONATHAN".to_string());
         let collectible = vec![
             Collectible::new('J', (5, 14)),
@@ -51,7 +55,6 @@ impl Level {
             Collectible::new('A', (21, 14)),
             Collectible::new('N', (22, 14)),
         ];
-        let gate_position = (0, 0);
 
         Level {
             index: 1,
@@ -59,12 +62,14 @@ impl Level {
             game_map,
             puzzle,
             collectible,
-            gate_position,
         }
     }
 
     fn level1() -> Self {
-        let game_map = Asset::new(GameMap::load("resources/tiled/level1.tmx"));
+        let game_map = Asset::new(GameMap::load(
+            "resources/tiled/level1.tmx",
+            Position::new(24, 13),
+        ));
         let puzzle = Puzzle::new("APPLE".to_string());
         let collectible = vec![
             Collectible::new('A', (5, 7)),
@@ -73,7 +78,6 @@ impl Level {
             Collectible::new('L', (17, 11)),
             Collectible::new('E', (22, 11)),
         ];
-        let gate_position = (0, 0);
 
         Level {
             index: 0,
@@ -81,7 +85,6 @@ impl Level {
             game_map,
             puzzle,
             collectible,
-            gate_position,
         }
     }
 
@@ -99,6 +102,10 @@ impl Level {
                 }
             }
             puzzle.update(window)?;
+            if puzzle.is_solved() {
+                game_map.open_gate();
+            }
+
             Ok(())
         })?;
 

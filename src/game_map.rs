@@ -1,6 +1,8 @@
 use futures::{future, Future};
 use game_layer::GameLayer;
+use gate::Gate;
 use grid::Grid;
+use primitive::{Dimension, Position};
 use quicksilver::{
     geom::Rectangle,
     graphics::Image,
@@ -48,6 +50,9 @@ lazy_static! {
 pub struct GameMap {
     layers: Vec<GameLayer>,
     grid: GridMap,
+    gate: Gate,
+    tileset: tiled::Tileset,
+    tileset_image: Asset<Image>,
 }
 
 type GridMap = Vec<Vec<Grid>>;
@@ -55,37 +60,61 @@ type GridMap = Vec<Vec<Grid>>;
 impl GameMap {
     pub fn load<'a, P: 'static + AsRef<Path>>(
         path: P,
+        gate_position: Position,
     ) -> impl Future<Item = GameMap, Error = Error> {
         load_file(PathBuf::from(path.as_ref()))
-            .map(|data| Self::from_bytes(data.as_slice()))
+            .map(move |data| Self::from_bytes(data.as_slice(), gate_position))
             .and_then(future::result)
     }
 
-    pub fn from_bytes(raw: &[u8]) -> Result<GameMap> {
+    pub fn open_gate(&mut self) {
+        self.gate.open();
+    }
+
+    pub fn from_bytes(raw: &[u8], gate_position: Position) -> Result<GameMap> {
         let map = tiled::parse(raw)
             .map_err(|_| Error::ContextError("Error loading level".to_string()))?;
+        let tileset = &map.tilesets[0];
+        let tileset_image = Asset::new(Image::load(format!(
+            "resources/tiled/{}",
+            tileset.images[0].source
+        )));
+        let tile_dimension = Dimension::new(map.tile_width, map.tile_height);
+        let image_dimension = Dimension::new(
+            tileset.images[0].width as u32,
+            tileset.images[0].height as u32,
+        );
+
         let layers: Vec<GameLayer> = map
             .layers
             .iter()
-            .map(|layer| {
-                Self::to_game_layer(
-                    &layer,
-                    map.tile_width,
-                    map.tile_height,
-                    &map.tilesets[0].images[0],
-                )
-            }).collect();
+            .map(|layer| Self::to_game_layer(&layer, &tile_dimension, &image_dimension))
+            .collect();
+
         let grid: GridMap = Self::to_grid(map.layers);
-        let game_map = GameMap { layers, grid };
-        // println!("{:?}", game_map);
+        let gate: Gate = Gate::new(gate_position, tile_dimension, image_dimension);
+        let game_map = GameMap {
+            layers,
+            grid,
+            gate,
+            tileset: tileset.clone(),
+            tileset_image,
+        };
         Ok(game_map)
     }
 
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {
-        let len = self.layers.len();
-        for i in 0..len {
-            self.layers[i].draw(window)?;
-        }
+        let layers = &mut self.layers;
+        let len = layers.len();
+        let gate = &mut self.gate;
+        self.tileset_image.execute(move |tileset| {
+            for i in 0..len {
+                layers[i].draw(window, tileset)?;
+            }
+
+            gate.draw(window, tileset)?;
+            Ok(())
+        })?;
 
         Ok(())
     }
@@ -98,7 +127,7 @@ impl GameMap {
         }
 
         match self.grid[y][x] {
-            Grid::Path => true,
+            Grid::Path => true && !self.gate.is_gate(x as u32, y as u32),
             Grid::NonPath => false,
             Grid::Empty => false,
         }
@@ -121,12 +150,16 @@ impl GameMap {
                                     return Grid::Path;
                                 }
                                 Grid::NonPath
-                            }).collect()
-                    }).collect()
-            }).fold(None, |a, b| match a {
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .fold(None, |a, b| match a {
                 None => Some(b),
                 Some(a) => Some(Self::join(a, b)),
-            }).unwrap()
+            })
+            .unwrap()
     }
 
     fn join(a: GridMap, b: GridMap) -> GridMap {
@@ -151,18 +184,15 @@ impl GameMap {
                             (_, Grid::NonPath) => Grid::NonPath,
                             (Grid::NonPath, _) => Grid::NonPath,
                         }
-                    }).collect()
-            }).collect();
+                    })
+                    .collect()
+            })
+            .collect();
 
         new_grid
     }
 
-    fn to_game_layer(
-        layer: &tiled::Layer,
-        tile_width: u32,
-        tile_height: u32,
-        image: &tiled::Image,
-    ) -> GameLayer {
+    fn to_game_layer(layer: &tiled::Layer, tile: &Dimension, image: &Dimension) -> GameLayer {
         let tiles: Vec<Vec<u32>> = layer
             .tiles
             .iter()
@@ -172,32 +202,26 @@ impl GameMap {
             .iter()
             .map(|row| {
                 row.iter()
-                    .map(|tile: &u32| Self::to_rectangle(*tile, tile_width, tile_height, image))
+                    .map(|tile_index: &u32| Self::to_rectangle(*tile_index, tile, image))
                     .collect()
-            }).collect();
-        let image = Asset::new(Image::load(format!("resources/tiled/{}", image.source)));
+            })
+            .collect();
         GameLayer {
             name: layer.name.clone(),
             tiles,
             rectangles,
-            image,
         }
     }
 
-    fn to_rectangle(
-        tile: u32,
-        tile_width: u32,
-        tile_height: u32,
-        image: &tiled::Image,
-    ) -> Option<Rectangle> {
-        match tile {
+    fn to_rectangle(tile_index: u32, tile: &Dimension, image: &Dimension) -> Option<Rectangle> {
+        match tile_index {
             0 => None,
             _ => Some(Rectangle::new(
                 (
-                    ((tile % (image.width as u32 / tile_width) * tile_width) - tile_width) as f32,
-                    (tile / (image.width as u32 / tile_height) * tile_height) as f32,
+                    ((tile_index % (image.width / tile.width) * tile.width) - tile.width) as f32,
+                    (tile_index / (image.width / tile.height) * tile.height) as f32,
                 ),
-                (tile_width as f32, tile_height as f32),
+                (tile.width as f32, tile.height as f32),
             )),
         }
     }
