@@ -3,6 +3,7 @@ use direction::Direction;
 use game_map::GameMap;
 use grid::Grid;
 use player_state::PlayerState;
+use primitive::Position;
 use quicksilver::{
     geom::{Shape, Transform, Vector},
     graphics::{Background::Img, Image},
@@ -12,7 +13,7 @@ use quicksilver::{
 };
 
 pub struct Player {
-    pub position: (u32, u32),
+    pub position: Position,
     state: PlayerState,
     framerate: u32,
     standing_side_sprites: Vec<Asset<Image>>,
@@ -60,7 +61,7 @@ impl Player {
         ];
 
         Player {
-            position: (0, 0),
+            position: Position::new(0, 0),
             state: PlayerState::Standing(Direction::Right),
             framerate: 5,
             standing_side_sprites,
@@ -93,18 +94,18 @@ impl Player {
             grid_count,
         } = self.state
         {
-            if !game_map.can_walk_to(self.next_position(direction)) {
+            if !game_map.can_walk_to(&self.next_position(direction)) {
                 self.stop();
                 return Ok(());
             }
             if timer <= 0. {
                 match direction {
-                    Direction::Right => self.position.0 += 1,
-                    Direction::Left if self.position.0 < 1 => {}
-                    Direction::Left => self.position.0 -= 1,
-                    Direction::Up if self.position.1 < 1 => {}
-                    Direction::Up => self.position.1 -= 1,
-                    Direction::Down => self.position.1 += 1,
+                    Direction::Right => self.position.x += 1,
+                    Direction::Left if self.position.x < 1 => {}
+                    Direction::Left => self.position.x -= 1,
+                    Direction::Up if self.position.y < 1 => {}
+                    Direction::Up => self.position.y -= 1,
+                    Direction::Down => self.position.y += 1,
                 };
                 if grid_count > 1 {
                     self.state.grid_count(grid_count - 1);
@@ -177,14 +178,14 @@ impl Player {
         }
     }
 
-    fn next_position(&self, direction: Direction) -> (u32, u32) {
+    fn next_position(&self, direction: Direction) -> Position {
         match direction {
-            Direction::Right => (self.position.0 + 1, self.position.1),
-            Direction::Left if self.position.0 < 1 => self.position,
-            Direction::Left => (self.position.0 - 1, self.position.1),
-            Direction::Up if self.position.1 < 1 => self.position,
-            Direction::Up => (self.position.0, self.position.1 - 1),
-            Direction::Down => (self.position.0, self.position.1 + 1),
+            Direction::Right => self.position.add(1, 0),
+            Direction::Left if self.position.x < 1 => self.position.clone(),
+            Direction::Left => self.position.add(-1, 0),
+            Direction::Up if self.position.y < 1 => self.position.clone(),
+            Direction::Up => self.position.add(0, -1),
+            Direction::Down => self.position.add(0, 1),
         }
     }
 
@@ -194,7 +195,7 @@ impl Player {
 
     fn walk(&mut self, direction: Direction, game_map: &GameMap) {
         let next_position = self.next_position(direction);
-        if game_map.can_walk_to(next_position) && self.position != next_position {
+        if game_map.can_walk_to(&next_position) && self.position != next_position {
             self.standing_tick = 0.;
             self.standing_sprites_idx = 0;
             self.state = PlayerState::Walking {
@@ -209,16 +210,20 @@ impl Player {
         }
     }
 
-    fn walk_to(&mut self, (x, y): (u32, u32)) {
-        let (direction_x, grid_count_x) = match x > self.position.0 {
-            true => (Direction::Right, x - self.position.0),
-            false if x < self.position.0 => (Direction::Left, self.position.0 - x),
+    fn walk_to(&mut self, next_position: Position) {
+        let (direction_x, grid_count_x) = match next_position.x > self.position.x {
+            true => (Direction::Right, next_position.x - self.position.x),
+            false if next_position.x < self.position.x => {
+                (Direction::Left, self.position.x - next_position.x)
+            }
             _ => (Direction::Right, 0),
         };
 
-        let (direction_y, grid_count_y) = match y > self.position.1 {
-            true => (Direction::Down, y - self.position.1),
-            false if y < self.position.1 => (Direction::Up, self.position.1 - y),
+        let (direction_y, grid_count_y) = match next_position.y > self.position.y {
+            true => (Direction::Down, next_position.y - self.position.y),
+            false if next_position.y < self.position.y => {
+                (Direction::Up, self.position.y - next_position.y)
+            }
             _ => (Direction::Right, 0),
         };
 
@@ -242,7 +247,7 @@ impl Player {
     }
 
     pub fn draw(&mut self, window: &mut Window) -> Result<()> {
-        let player_coordinate = Grid::to_player_coordinate(&self.state, self.position);
+        let player_coordinate = Grid::to_player_coordinate(&self.state, &self.position);
         let scale = Transform::scale(Vector::new(SCALING_FACTOR, SCALING_FACTOR));
         let flip = Transform::scale(Vector::new(-1, 1));
         let transformation = match self.state {

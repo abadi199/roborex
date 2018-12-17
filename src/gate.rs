@@ -11,7 +11,7 @@ use quicksilver::{
 const GATE_INDEX: u32 = 214;
 
 pub struct Gate {
-    position: Position,
+    pub position: Position,
     state: State,
     gate_rec: Rectangle,
 }
@@ -51,7 +51,7 @@ impl Gate {
 
     pub fn draw(&mut self, window: &mut Window, tileset: &Image) -> Result<()> {
         if self.state == State::Closed {
-            let draw_rec = Grid::to_rectangle(self.position.x, self.position.y);
+            let draw_rec = Grid::to_rectangle(&self.position.add(0, -1));
             let scale = Transform::scale(Vector::new(2, 2));
             window.draw_ex(
                 &draw_rec,
@@ -60,7 +60,7 @@ impl Gate {
                 constant::GATE_Z,
             );
 
-            let draw_rec = Grid::to_rectangle(self.position.x, self.position.y + 1);
+            let draw_rec = Grid::to_rectangle(&self.position);
             window.draw_ex(
                 &draw_rec,
                 Img(&tileset.subimage(self.gate_rec)),
@@ -68,7 +68,7 @@ impl Gate {
                 constant::GATE_Z,
             );
 
-            let draw_rec = Grid::to_rectangle(self.position.x, self.position.y + 2);
+            let draw_rec = Grid::to_rectangle(&self.position.add(0, 1));
             window.draw_ex(
                 &draw_rec,
                 Img(&tileset.subimage(self.gate_rec)),

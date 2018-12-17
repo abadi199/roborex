@@ -1,4 +1,5 @@
 use grid::Grid;
+use primitive::Position;
 use quicksilver::{
     geom::{Rectangle, Transform, Vector},
     graphics::{Background::Img, Image},
@@ -20,7 +21,7 @@ impl GameLayer {
         for (y, row) in rectangles.iter().enumerate() {
             for (x, col) in row.iter().enumerate() {
                 if let Some(rec) = col {
-                    let draw_rec = Grid::to_rectangle(x as u32, y as u32);
+                    let draw_rec = Grid::to_rectangle(&Position::new(x as u32, y as u32));
                     window.draw_ex(
                         &draw_rec,
                         Img(&tileset.subimage(*rec)),

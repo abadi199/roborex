@@ -40,7 +40,7 @@ struct RoboRex {
 impl RoboRex {
     fn start_level(&mut self, level: Level) {
         self.level = level;
-        self.player.position = self.level.start_position;
+        self.player.position = self.level.start_position.clone();
     }
 }
 
@@ -48,7 +48,7 @@ impl State for RoboRex {
     fn new() -> Result<RoboRex> {
         let level = Level::start();
         let mut player = Player::new();
-        player.position = level.start_position;
+        player.position = level.start_position.clone();
         let roborex = RoboRex {
             time: 0.,
             player,
@@ -60,17 +60,15 @@ impl State for RoboRex {
 
     fn update(&mut self, window: &mut Window) -> Result<()> {
         self.time += window.update_rate();
-        match self.level.update(window, &mut self.player)? {
-            level::Solved::Yes => {
-                println!("Level Solved!");
-                // let next_level = self.level.next_level();
-                // match next_level {
-                //     Some(level) => self.start_level(level),
-                //     None => panic!("Finish level not implemented yet"),
-                // }
+        self.level.update(window, &mut self.player)?;
+
+        if self.level.passing_the_gate(&self.player) {
+            let next_level = self.level.next_level();
+            match next_level {
+                Some(level) => self.start_level(level),
+                None => panic!("Finish level not implemented yet"),
             }
-            level::Solved::No => {}
-        };
+        }
 
         Ok(())
     }

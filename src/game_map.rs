@@ -67,6 +67,10 @@ impl GameMap {
             .and_then(future::result)
     }
 
+    pub fn gate_position(&self) -> &Position {
+        &self.gate.position
+    }
+
     pub fn open_gate(&mut self) {
         self.gate.open();
     }
@@ -119,9 +123,9 @@ impl GameMap {
         Ok(())
     }
 
-    pub fn can_walk_to(&self, (x, y): (u32, u32)) -> bool {
-        let x = x as usize;
-        let y = y as usize;
+    pub fn can_walk_to(&self, position: &Position) -> bool {
+        let x = position.x as usize;
+        let y = position.y as usize;
         if self.grid.len() <= y || self.grid[y].len() <= x {
             return false;
         }

@@ -1,6 +1,7 @@
 use constant::COLLECTIBLE_Z;
 use grid::Grid;
 use player::Player;
+use primitive::Position;
 use quicksilver::{
     geom::{Shape, Transform, Vector},
     graphics::{Background::Img, Color, Font, FontStyle},
@@ -10,13 +11,13 @@ use quicksilver::{
 
 pub struct Collectible {
     pub status: Status,
-    pub position: (u32, u32),
+    pub position: Position,
     pub letter: char,
     pub font: Asset<Font>,
 }
 
 impl Collectible {
-    pub fn new(letter: char, position: (u32, u32)) -> Self {
+    pub fn new(letter: char, position: Position) -> Self {
         let font = Asset::new(Font::load("resources/fonts/slkscr.ttf"));
         Collectible {
             status: Status::NotCollected,
@@ -44,7 +45,7 @@ impl Collectible {
         self.font.execute(|font| {
             let normal = FontStyle::new(24.0, Color::WHITE);
             let word_text = font.render(&letter.to_string(), &normal)?;
-            let rectangle = Grid::to_collectible_coordinate(position.0, position.1);
+            let rectangle = Grid::to_collectible_coordinate(position);
 
             window.draw_ex(
                 &word_text.area().with_center(rectangle.pos),

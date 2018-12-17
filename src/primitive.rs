@@ -1,3 +1,4 @@
+#[derive(PartialEq)]
 pub struct Dimension {
     pub width: u32,
     pub height: u32,
@@ -9,6 +10,7 @@ impl Dimension {
     }
 }
 
+#[derive(PartialEq, Clone)]
 pub struct Position {
     pub x: u32,
     pub y: u32,
@@ -17,5 +19,12 @@ pub struct Position {
 impl Position {
     pub fn new(x: u32, y: u32) -> Self {
         Position { x, y }
+    }
+
+    pub fn add(&self, x: i32, y: i32) -> Self {
+        Position {
+            x: (self.x as i32 + x) as u32,
+            y: (self.y as i32 + y) as u32,
+        }
     }
 }

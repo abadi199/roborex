@@ -1,6 +1,7 @@
 use constant::{GRID_HEIGHT, GRID_WIDTH, TILE_HEIGHT, TILE_WIDTH, WALKING_DURATION};
 use direction::Direction;
 use player_state::PlayerState;
+use primitive::Position;
 use quicksilver::geom::{Rectangle, Vector};
 use std::fmt;
 
@@ -19,34 +20,34 @@ const GRID_X_OFFSET: u32 = TILE_WIDTH / 2;
 const GRID_Y_OFFSET: u32 = TILE_HEIGHT / 2;
 
 impl Grid {
-    pub fn to_collectible_coordinate(x: u32, y: u32) -> Rectangle {
+    pub fn to_collectible_coordinate(position: &Position) -> Rectangle {
         Rectangle::new(
             (
-                (x * GRID_WIDTH) + COLLECTIBLE_X_OFFSET,
-                (y * GRID_HEIGHT) + COLLECTIBLE_Y_OFFSET,
+                (position.x * GRID_WIDTH) + COLLECTIBLE_X_OFFSET,
+                (position.y * GRID_HEIGHT) + COLLECTIBLE_Y_OFFSET,
             ),
             (TILE_WIDTH, TILE_HEIGHT),
         )
     }
 
-    pub fn to_rectangle(x: u32, y: u32) -> Rectangle {
+    pub fn to_rectangle(position: &Position) -> Rectangle {
         Rectangle::new(
             (
-                (x * GRID_WIDTH) + GRID_X_OFFSET,
-                (y * GRID_HEIGHT) + GRID_Y_OFFSET,
+                (position.x * GRID_WIDTH) + GRID_X_OFFSET,
+                (position.y * GRID_HEIGHT) + GRID_Y_OFFSET,
             ),
             (TILE_WIDTH, TILE_HEIGHT),
         )
     }
 
-    pub fn from_coordinate(coordinate: Vector) -> (u32, u32) {
-        (
+    pub fn from_coordinate(coordinate: Vector) -> Position {
+        Position::new(
             ((coordinate.x - GRID_X_OFFSET as f32) / GRID_WIDTH as f32) as u32,
             ((coordinate.y - GRID_Y_OFFSET as f32) / GRID_HEIGHT as f32) as u32,
         )
     }
 
-    pub fn to_player_coordinate(state: &PlayerState, (x, y): (u32, u32)) -> Vector {
+    pub fn to_player_coordinate(state: &PlayerState, position: &Position) -> Vector {
         let (delta_x, delta_y) = match state {
             PlayerState::Walking {
                 direction: Direction::Right,
@@ -84,8 +85,8 @@ impl Grid {
         };
 
         Vector::new(
-            (((x * GRID_WIDTH) + PLAYER_X_OFFSET) as i32 + delta_x as i32) as u32,
-            (((y * GRID_HEIGHT) + PLAYER_Y_OFFSET) as i32 + delta_y as i32) as u32,
+            (((position.x * GRID_WIDTH) + PLAYER_X_OFFSET) as i32 + delta_x as i32) as u32,
+            (((position.y * GRID_HEIGHT) + PLAYER_Y_OFFSET) as i32 + delta_y as i32) as u32,
         )
     }
 }
