@@ -45,9 +45,9 @@ impl Puzzle {
     pub fn new(word: String) -> Self {
         let font = Asset::new(Font::load("resources/fonts/slkscr.ttf"));
         let answer = word.chars().map(|letter| Answered::No(letter)).collect();
-        let instruction_sound = Asset::new(Sound::load("resources/sounds/instructions.ogg"));
+        let instruction_sound = Asset::new(Sound::load("resources/sounds/instructions.mp3"));
         let answer_sound = Asset::new(Sound::load(format!(
-            "resources/sounds/{}.ogg",
+            "resources/sounds/{}.mp3",
             word.to_ascii_lowercase()
         )));
         Puzzle {
