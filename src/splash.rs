@@ -1,6 +1,6 @@
 use quicksilver::{
     graphics::{Background::Img, Image},
-    input::{ButtonState, MouseButton},
+    input::{ButtonState, Key, MouseButton},
     lifecycle::{Asset, Window},
     Result,
 };
@@ -31,7 +31,15 @@ impl Splash {
     }
 
     pub fn update(&mut self, window: &mut Window) -> Result<()> {
+        if let State::Clicked = self.state {
+            return Ok(());
+        }
+
         if window.mouse()[MouseButton::Left] == ButtonState::Released {
+            self.state = State::Clicked;
+        }
+
+        if window.keyboard()[Key::Return].is_down() {
             self.state = State::Clicked;
         }
 
