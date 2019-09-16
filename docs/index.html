@@ -14,18 +14,13 @@
                 }
 
                 var canvas = document.createElement( 'canvas' );
-                document.querySelector( '#main' ).appendChild( canvas );
+                document.querySelector( 'body' ).appendChild( canvas );
                 __cargo_web.canvas = canvas;
 
                 return canvas;
             }
         });
     </script>
-    <style>
-     body {
-         margin: 0; overflow: hidden; background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; width: 100vw;
-     }
-    </style>
 </head>
 <body>
     <script src="roborex-qs.js"></script>
